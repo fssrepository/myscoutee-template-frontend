@@ -1,0 +1,37 @@
+<app-popup [model]="popup()" guideContext="profile">
+  <div class="profile-editor-popup-content" [attr.inert]="panel() !== 'profile' ? '' : null">
+    <div class="profile-editor-wrap">
+      <div class="profile-editor-header-card">
+        <app-header-card [model]="header()" editGuideField="profile-photo" (edit)="panel.set('image')" />
+        <app-menu class="profile-api-integration-action" data-guide-field="profile-shortcuts" kind="inline" layout="row"
+          [model]="{ actionSizing: 'content' }"
+          [items]="[{ id: 'profile-api-integration', kind: 'action', icon: 'api', label: 'integration.title', ariaLabel: 'integration.title', layout: 'action', compactOnMobile: true, palette: 'blue' }]"
+          (itemSelect)="openApi($event)" />
+      </div>
+      <div class="profile-editor-scroll-area">
+        <div class="profile-editor-flow-area">
+          <app-form-flow class="profile-editor-flow" data-guide-field="profile-form"
+            [model]="form()" [ngModel]="editor.draft()" (ngModelChange)="editor.draft.set($event)"
+            [saving]="editor.saving()" [disabled]="editor.busy()" />
+        </div>
+      </div>
+    </div>
+  </div>
+</app-popup>
+@if (panel() === 'image') {
+  <app-popup [model]="imagePopup" guideContext="profile">
+    <div class="profile-editor-popup-content">
+      <div class="image-editor-wrap">
+        <app-image-carousel data-guide-field="profile-picture" [previewMode]="true"
+          [ngModel]="editor.draft().images" (ngModelChange)="updateImages($event)"
+          [uploadOwnerId]="profiles.activeUserId()" [disabled]="editor.saving()"
+          (uploadingChange)="editor.uploading.set($event)" />
+      </div>
+    </div>
+  </app-popup>
+}
+
+@if (apiOpen()) {
+  <app-integration-settings-popup [adminMode]="profiles.activeUserIsAdmin()"
+    [roleReadOnly]="profiles.activeUserIsAdmin() || profiles.activeUserIsOperator()" (closed)="apiOpen.set(false)" />
+}

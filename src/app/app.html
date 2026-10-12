@@ -1,0 +1,45 @@
+<main class="main" [class.main-public]="!showSideMenu && !gameStartupVisible">
+  <div class="content" [class.content-single]="showSideMenu || gameStartupVisible" [class.content-public]="!showSideMenu && !gameStartupVisible">
+    <section class="content-area" [class.content-area-full]="showSideMenu || gameStartupVisible" [class.content-area-public]="!showSideMenu && !gameStartupVisible">
+      @if (gameStartupVisible) {
+        <div class="game-page game-startup" aria-busy="true">
+          <app-home-header [branding]="deploymentBranding()"></app-home-header>
+        </div>
+      }
+      <router-outlet (activate)="onRouteActivated()"></router-outlet>
+    </section>
+  </div>
+</main>
+
+@if (gameStartupVisible) {
+  <app-menu class="game-startup-avatar user-selector-menu" kind="inline" layout="row" [items]="loadingAvatarItems()" />
+}
+
+
+
+
+
+@if (routeWarmupVisible && !gameStartupVisible) {
+  <section
+    class="app-route-warmup"
+    role="status"
+    aria-live="polite"
+    [attr.aria-label]="'Loading ' + deploymentBranding().productName"
+  >
+    <span class="app-route-warmup__mark">
+      <span class="app-route-warmup__ring" aria-hidden="true"></span>
+      @if (deploymentBranding().logoUrl; as logoUrl) {
+        <img [src]="logoUrl" alt="" />
+      }
+    </span>
+    <span class="app-route-warmup__label">{{ deploymentBranding().productName }}</span>
+  </section>
+}
+
+<!-- Store-owned overlays keep one instance across route transitions. -->
+<app-dialog></app-dialog>
+@if (demoBootstrapSelector()) {
+  @if (demoBootstrapSelectorComponent(); as component) {
+    <ng-container *ngComponentOutlet="component"></ng-container>
+  }
+}

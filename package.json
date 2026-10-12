@@ -1,0 +1,81 @@
+{
+  "name": "myscoutee-template",
+  "version": "1.4.0",
+  "scripts": {
+    "ng": "ng",
+    "start": "npm run start:local",
+    "start:local": "bash -lc 'set -o pipefail; mkdir -p .agent/logs; WATCHPACK_POLLING=true NG_BUILD_MAX_WORKERS=12 node scripts/with-components.mjs serve --configuration local 2>&1 | tee .agent/logs/ng-serve-local.log'",
+    "start:dev": "bash -lc 'set -o pipefail; mkdir -p .agent/logs; WATCHPACK_POLLING=true NG_BUILD_MAX_WORKERS=12 node scripts/with-components.mjs serve --configuration dev 2>&1 | tee .agent/logs/ng-serve-dev.log'",
+    "start:e2e": "bash -lc 'set -o pipefail; mkdir -p .agent/logs; WATCHPACK_POLLING=true NG_BUILD_MAX_WORKERS=12 node scripts/with-components.mjs serve --configuration e2e 2>&1 | tee .agent/logs/ng-serve-e2e.log'",
+    "start:pcores": "bash -lc 'set -o pipefail; mkdir -p .agent/logs; taskset -c 0-3 env WATCHPACK_POLLING=true NG_BUILD_MAX_WORKERS=12 node scripts/with-components.mjs serve --configuration local 2>&1 | tee .agent/logs/ng-serve-local.log'",
+    "start:log": "npm run start",
+    "start:nolog": "WATCHPACK_POLLING=true NG_BUILD_MAX_WORKERS=12 node scripts/with-components.mjs serve --configuration local",
+    "start:prod": "bash -lc 'set -o pipefail; mkdir -p .agent/logs; WATCHPACK_POLLING=true NG_BUILD_MAX_WORKERS=12 node scripts/with-components.mjs serve --configuration production-serve 2>&1 | tee .agent/logs/ng-serve-prod.log'",
+    "start:events": "bash scripts/watch-ng-serve-log.sh",
+    "start:wait-build": "bash scripts/watch-ng-serve-log.sh --once",
+    "build": "npm run build:local",
+    "build:local": "NG_BUILD_MAX_WORKERS=12 node scripts/with-components.mjs build --configuration local",
+    "build:dev": "NG_BUILD_MAX_WORKERS=12 node scripts/with-components.mjs build --configuration dev",
+    "build:e2e": "NG_BUILD_MAX_WORKERS=12 node scripts/with-components.mjs build --configuration e2e",
+    "build:github": "NG_BUILD_MAX_WORKERS=12 node scripts/with-components.mjs build --configuration github --base-href /myscoutee-template-frontend/ && FRONTEND_BUILD_OUTPUT_DIR=docs node scripts/stamp-prod-build.js && touch docs/.nojekyll",
+    "build:pcores": "taskset -c 0-3 env NG_BUILD_MAX_WORKERS=12 node scripts/with-components.mjs build --configuration local",
+    "build:log": "bash -lc 'set -o pipefail; mkdir -p .agent/logs; NG_BUILD_MAX_WORKERS=12 node scripts/with-components.mjs build --configuration local 2>&1 | tee .agent/logs/ng-build-local.log'",
+    "build:prod": "NG_BUILD_MAX_WORKERS=12 node scripts/with-components.mjs build --configuration production && FRONTEND_BUILD_OUTPUT_DIR=prod node scripts/stamp-prod-build.js",
+    "build:prod:pcores": "taskset -c 0-3 env NG_BUILD_MAX_WORKERS=12 node scripts/with-components.mjs build --configuration production && FRONTEND_BUILD_OUTPUT_DIR=prod node scripts/stamp-prod-build.js",
+    "build:prod:log": "bash -lc 'set -o pipefail; mkdir -p .agent/logs; NG_BUILD_MAX_WORKERS=12 node scripts/with-components.mjs build --configuration production 2>&1 | tee .agent/logs/ng-build-prod.log && FRONTEND_BUILD_OUTPUT_DIR=prod node scripts/stamp-prod-build.js 2>&1 | tee -a .agent/logs/ng-build-prod.log'",
+    "watch": "npm run watch:dev",
+    "watch:dev": "NG_BUILD_MAX_WORKERS=12 node scripts/with-components.mjs build --watch --configuration dev",
+    "watch:e2e": "NG_BUILD_MAX_WORKERS=12 node scripts/with-components.mjs build --watch --configuration e2e",
+    "watch:pcores": "taskset -c 0-3 env NG_BUILD_MAX_WORKERS=12 node scripts/with-components.mjs build --watch --configuration dev",
+    "watch:log": "bash -lc 'mkdir -p .agent/logs; NG_BUILD_MAX_WORKERS=12 node scripts/with-components.mjs build --watch --configuration dev 2>&1 | tee .agent/logs/ng-watch-dev.log'",
+    "test": "node scripts/with-components.mjs test",
+    "build:components": "npm run build --workspace @fssrepository/myscoutee-components",
+    "generate:i18n-seeds": "node scripts/generate-i18n-mongo-seed.js",
+    "audit:i18n-seeds": "node scripts/audit-i18n-mongo-seed.js"
+  },
+  "prettier": {
+    "printWidth": 100,
+    "singleQuote": true,
+    "overrides": [
+      {
+        "files": "*.html",
+        "options": {
+          "parser": "angular"
+        }
+      }
+    ]
+  },
+  "private": true,
+  "packageManager": "npm@11.8.0",
+  "dependencies": {
+    "@angular/cdk": "^21.2.12",
+    "@angular/common": "^21.2.23",
+    "@angular/compiler": "^21.2.23",
+    "@angular/core": "^21.2.23",
+    "@angular/forms": "^21.2.23",
+    "@angular/platform-browser": "^21.2.23",
+    "@angular/router": "^21.2.23",
+    "@fontsource/roboto": "^5.2.10",
+    "@wireapp/core-crypto": "10.5.4",
+    "firebase": "^12.10.0",
+    "material-icons": "^1.13.14",
+    "qrcode": "1.5.4",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0",
+    "@fssrepository/myscoutee-components": "1.4.0"
+  },
+  "devDependencies": {
+    "@angular/build": "^21.2.12",
+    "@angular/cli": "^21.2.12",
+    "@angular/compiler-cli": "^21.2.23",
+    "@angular/material": "^21.2.12",
+    "@types/qrcode": "1.5.6",
+    "jsdom": "^27.1.0",
+    "playwright": "^1.60.0",
+    "typescript": "~5.9.2",
+    "vitest": "^4.0.8"
+  },
+  "workspaces": [
+    "components"
+  ]
+}

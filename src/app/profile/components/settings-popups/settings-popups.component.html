@@ -1,0 +1,14 @@
+@if (activePopup() === 'privacy') {
+  <app-document-viewer
+    [config]="privacyDocumentConfig()"
+    (action)="onPrivacyDocumentAction($event)"
+  ></app-document-viewer>
+} @else if (activePopup() === 'terms') {
+  <app-document-viewer
+    [config]="termsDocumentConfig()"
+  ></app-document-viewer>
+} @else if (activePopup() === 'help') {
+  <app-document-viewer
+    [config]="helpDocumentConfig()"
+  ></app-document-viewer>
+}

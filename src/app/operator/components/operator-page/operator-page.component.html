@@ -1,0 +1,12 @@
+<div class="operator-page-scroll">
+  <main data-guide-surface="operator.home" class="operator-home">
+    <header class="operator-home-header">
+      <a class="operator-brand" [attr.aria-label]="deploymentBranding().productName">
+        <app-deployment-brand [branding]="deploymentBranding()" />
+      </a>
+    </header>
+    <section class="operator-actions" [attr.aria-label]="'operator.actions' | i18n">
+      <app-menu kind="inline" layout="row" [items]="actionItems()" (itemSelect)="actionSelected.emit($event.id)" />
+    </section>
+  </main>
+</div>

@@ -1,0 +1,269 @@
+@use '@fssrepository/myscoutee-components/styles' as ui;
+
+@include ui.popup-shell();
+@include ui.interactive-motion();
+
+:host {
+  display: contents;
+  --app-popup-small-width: 560px;
+}
+
+.integration-help-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.75rem;
+  padding: 1rem;
+  color: #263f5b;
+}
+
+.integration-help-body h3 {
+  margin: 0 0 0.4rem;
+  font-size: 0.9rem;
+}
+
+.integration-help-body ul,
+.integration-help-body ol {
+  margin: 0 0 1rem;
+  padding-left: 1.35rem;
+  line-height: 1.45;
+}
+
+.integration-help-body li + li {
+  margin-top: 0.4rem;
+}
+
+.integration-help-body p {
+  margin: 0 0 0.75rem;
+  line-height: 1.45;
+}
+
+.integration-help-body a {
+  color: #1769aa;
+  font-weight: 700;
+}
+
+.integration-settings-body {
+  width: 100%;
+  display: grid;
+  gap: 0.82rem;
+  padding: 0.2rem;
+}
+
+.integration-settings-body--loading {
+  min-height: 100%;
+  box-sizing: border-box;
+  place-items: center;
+}
+
+.integration-settings-loading {
+  display: grid;
+  justify-items: center;
+  gap: 0.75rem;
+  color: var(--text-muted);
+}
+
+.integration-client-download {
+  justify-self: end;
+  max-width: 100%;
+}
+
+.integration-settings-section {
+  display: grid;
+  gap: 0.44rem;
+  padding: 0.74rem;
+  border: 1px solid rgba(26, 48, 78, 0.14);
+  border-radius: 12px;
+  background: #fbfdff;
+}
+
+.integration-section-heading h3 {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.integration-settings-section small,
+.integration-token-main span,
+.integration-token-main small,
+.integration-empty-state {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.integration-endpoint-label {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.integration-credential-field {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.integration-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.integration-token-list {
+  display: grid;
+  gap: 0.42rem;
+}
+
+.integration-section-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.integration-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 2.25rem;
+  height: 2.25rem;
+  box-sizing: border-box;
+  padding: 0 0.72rem;
+  border-radius: 999px;
+  background: #e8eef6;
+  color: #28476d;
+  font-size: 0.74rem;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.integration-token-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.6rem;
+  padding: 0.55rem 0.62rem;
+  border: 1px solid rgba(30, 55, 88, 0.12);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.integration-token-main {
+  min-width: 0;
+  display: grid;
+  gap: 0.08rem;
+}
+
+.integration-token-actions {
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-end;
+  gap: 0.4rem;
+}
+
+.integration-count-badge--ip {
+  display: block;
+  min-width: 0;
+  max-width: 10rem;
+  height: auto;
+  padding: 0.28rem 0.5rem;
+  font-size: 0.68rem;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.integration-token-title {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.32rem;
+}
+
+.integration-token-title strong {
+  min-width: 0;
+}
+
+.integration-token-status {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 15px;
+  font-size: 15px;
+  line-height: 15px;
+}
+
+.integration-token-status--available {
+  color: #2f8f66;
+}
+
+.integration-token-status--occupied {
+  color: #c33b3b;
+}
+
+.integration-token-meta {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 0.5rem;
+  row-gap: 0.08rem;
+}
+
+.integration-token-main strong,
+.integration-token-main span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.integration-token-secret {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.42rem;
+  margin-top: 0.28rem;
+}
+
+.integration-token-secret code,
+.integration-token-secret input {
+  min-width: 0;
+  padding: 0.42rem 0.5rem;
+  border: 1px solid rgba(47, 126, 82, 0.25);
+  border-radius: 8px;
+  background: #eef8f3;
+  color: #245f40;
+  font-size: 0.7rem;
+  overflow-wrap: anywhere;
+  user-select: all;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.integration-token-secret input {
+  border-color: #c3d2e5;
+  background: #f5f8fc;
+  color: #315d91;
+}
+
+.integration-settings-state,
+.integration-empty-state {
+  padding: 1rem;
+  text-align: center;
+}
+
+.integration-settings-state--error {
+  color: #a82e2e;
+}
+
+.integration-credential-row {
+  display: flex;
+  align-items: center;
+  gap: .42rem;
+  min-width: 0;
+
+  app-copy-link { flex: 1; min-width: 0; }
+}

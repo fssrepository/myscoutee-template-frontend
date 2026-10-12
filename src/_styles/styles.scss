@@ -1,0 +1,444 @@
+@use '@angular/material' as mat;
+@use 'deployment-themes';
+@import '@fontsource/roboto/300.css';
+@import '@fontsource/roboto/400.css';
+@import '@fontsource/roboto/500.css';
+@import 'material-icons/iconfont/material-icons.css';
+
+html {
+  height: 100%;
+  @include mat.theme((
+    color: (
+      primary: mat.$azure-palette,
+      tertiary: mat.$blue-palette,
+    ),
+    typography: Roboto,
+    density: 0,
+  ));
+}
+
+body {
+  color-scheme: light;
+  background-color: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-body-medium);
+  margin: 0;
+  height: 100%;
+}
+
+html.admin-document-no-scroll,
+body.admin-document-no-scroll {
+  overflow: hidden;
+}
+
+body.admin-document-no-scroll app-root {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Mobile: remove the blue tap highlight while keeping keyboard focus visible */
+*,
+*::before,
+*::after {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app-root,
+app-root,
+body,
+.app-popup,
+.app-popup-panel,
+.popup-panel,
+.popup-surface,
+.mat-mdc-dialog-container,
+.smart-list,
+.smart-list * {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+input,
+textarea,
+select,
+[contenteditable='true'],
+[contenteditable='true'] *,
+.selectable-text,
+.selectable-text * {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Hide focus outlines for non-keyboard (touch) interactions, but keep them for keyboard navigation */
+:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Accessible focus for keyboard users */
+:focus-visible {
+  outline: 3px solid rgba(21, 156, 228, 0.6);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+// Skip only offscreen/passed mobile photos. Keep inline URLs and loaded state;
+// the existing observer reveals cached photos once, without rebuilding cards.
+@media (max-width: 760px) {
+  .lazy-bg-suspended {
+    background-image: none !important;
+  }
+}
+
+:where(.lazy-image-frame-loading) {
+  position: relative;
+  isolation: isolate;
+}
+
+:where(.lazy-image-frame-loading)::before {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+}
+
+:where(.lazy-image-frame-loading)::before {
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  background: rgba(246, 250, 255, 0.58);
+}
+
+:where(.lazy-image-frame-spinner) {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  transform: translate(-50%, -50%);
+}
+
+:where(.lazy-image-frame-loading > img.lazy-image-loading) {
+  opacity: 0.34;
+}
+
+:where(.lazy-image-frame-loaded > img, .lazy-image-frame-fallback-active > img) {
+  opacity: 1;
+}
+
+/* Ensure links and buttons do not show the native tap highlight on mobile */
+a,
+button,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@keyframes global-mobile-touch-feedback {
+  0% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+
+  45% {
+    transform: scale(var(--interactive-press-scale, 0.97));
+    filter: brightness(var(--interactive-press-brightness, 0.97));
+  }
+
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
+$popup-close-wave-selector: ':where(button[class*="close" i], button[class*="back" i], button[aria-label*="close" i], button[aria-label*="back" i], button[aria-label*="cancel" i], button[aria-label*="dismiss" i], button[aria-label*="bezár" i], button[aria-label*="vissza" i], button[title*="close" i], button[title*="cancel" i], button[data-close-action="true"])';
+
+#{$popup-close-wave-selector} {
+  --popup-close-wave-color: rgba(255, 255, 255, 0.34);
+  --popup-close-rest-fill-color: rgba(255, 255, 255, 0.74);
+  --popup-close-rest-border-color: rgba(66, 86, 116, 0.22);
+  --popup-close-fill-color: rgba(110, 124, 145, 0.18);
+  --popup-close-click-fill-color: rgba(96, 111, 134, 0.24);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+#{$popup-close-wave-selector}:where(:has(> mat-icon)):not(:has(> span:not(.navigator-action-ripple):not(.app-global-action-wave))),
+#{$popup-close-wave-selector}:where(:has(> .popup-close-glyph)) {
+  min-width: 34px;
+  min-height: 34px;
+  border-radius: 50%;
+  border-color: var(--popup-close-rest-border-color);
+  background-color: var(--popup-close-rest-fill-color);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#{$popup-close-wave-selector} > * {
+  position: relative;
+  z-index: 1;
+}
+
+.app-global-action-wave {
+  position: absolute;
+  z-index: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  background: var(
+    --app-action-wave-color,
+    var(--popup-close-wave-color, rgba(255, 255, 255, 0.34))
+  );
+  opacity: 0.4;
+  transform: scale(0);
+  animation: app-global-action-wave 520ms cubic-bezier(0.2, 0, 0, 1) forwards;
+}
+
+@keyframes app-global-action-wave {
+  to {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :where(
+    button,
+    a[href],
+    summary,
+    [role='button'],
+    [tabindex='0'],
+    .link-btn,
+    .popup-view-fab,
+    .popup-header-add-btn,
+    .activities-view-option,
+    .profile-status-select-wrap,
+    .profile-details-values-btn,
+    .profile-details-privacy-btn,
+    .profile-privacy-menu-option,
+    .popup-close,
+    .date-picker-btn,
+    .avatar-edit-btn,
+    .experience-form-close-btn,
+    .image-editor-grid button,
+    .image-stack-line,
+    .image-stack-hit-segment,
+    .mobile-profile-selector-close-btn,
+    .mobile-profile-selector-option,
+    .popup-panel-profile-selector .profile-filter-selector-clear,
+    .popup-panel-profile-selector .profile-filter-selector-chip,
+    .popup-panel-profile-selector .profile-selector-chip,
+    .item-action-menu-btn,
+    .experience-action-btn,
+    .header-icon-btn,
+    .chat-header-members,
+    .activities-row-item-clickable,
+    .activities-card-btn,
+    .asset-source-icon,
+    .event-editor-members-trigger,
+    .motion-card,
+    [data-motion='card'],
+    .ui-info-card--clickable
+  ):not(.motion-static):not([data-motion='none']):not(:disabled):not([aria-disabled='true']) {
+    transition:
+      transform var(--interactive-motion-duration, 160ms) var(--interactive-motion-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+      filter var(--interactive-motion-duration, 160ms) var(--interactive-motion-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+      box-shadow var(--interactive-motion-duration, 160ms) var(--interactive-motion-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+      background-color var(--interactive-motion-duration, 160ms) var(--interactive-motion-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+      border-color var(--interactive-motion-duration, 160ms) var(--interactive-motion-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+      color var(--interactive-motion-duration, 160ms) var(--interactive-motion-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+      opacity var(--interactive-motion-duration, 160ms) var(--interactive-motion-ease, cubic-bezier(0.22, 1, 0.36, 1));
+    transform-origin: center;
+  }
+
+  :where(
+    button,
+    a[href],
+    summary,
+    [role='button'],
+    [tabindex='0'],
+    .link-btn,
+    .popup-view-fab,
+    .popup-header-add-btn,
+    .activities-view-option,
+    .profile-status-select-wrap,
+    .profile-details-values-btn,
+    .profile-details-privacy-btn,
+    .profile-privacy-menu-option,
+    .popup-close,
+    .date-picker-btn,
+    .avatar-edit-btn,
+    .experience-form-close-btn,
+    .image-editor-grid button,
+    .image-stack-line,
+    .image-stack-hit-segment,
+    .mobile-profile-selector-close-btn,
+    .mobile-profile-selector-option,
+    .popup-panel-profile-selector .profile-filter-selector-clear,
+    .popup-panel-profile-selector .profile-filter-selector-chip,
+    .popup-panel-profile-selector .profile-selector-chip,
+    .item-action-menu-btn,
+    .experience-action-btn,
+    .header-icon-btn,
+    .chat-header-members,
+    .activities-row-item-clickable,
+    .activities-card-btn,
+    .asset-source-icon,
+    .event-editor-members-trigger,
+    .motion-card,
+    [data-motion='card'],
+    .ui-info-card--clickable
+  ):not(.motion-static):not([data-motion='none']):not(:disabled):not([aria-disabled='true']):hover {
+    transform: translateY(var(--interactive-hover-lift, -1px)) scale(var(--interactive-hover-scale, 1.01));
+    filter: brightness(var(--interactive-hover-brightness, 1.01));
+  }
+
+  :where(
+    button,
+    a[href],
+    summary,
+    [role='button'],
+    [tabindex='0'],
+    .link-btn,
+    .popup-view-fab,
+    .popup-header-add-btn,
+    .activities-view-option,
+    .profile-status-select-wrap,
+    .profile-details-values-btn,
+    .profile-details-privacy-btn,
+    .profile-privacy-menu-option,
+    .popup-close,
+    .date-picker-btn,
+    .avatar-edit-btn,
+    .experience-form-close-btn,
+    .image-editor-grid button,
+    .image-stack-line,
+    .image-stack-hit-segment,
+    .mobile-profile-selector-close-btn,
+    .mobile-profile-selector-option,
+    .popup-panel-profile-selector .profile-filter-selector-clear,
+    .popup-panel-profile-selector .profile-filter-selector-chip,
+    .popup-panel-profile-selector .profile-selector-chip,
+    .item-action-menu-btn,
+    .experience-action-btn,
+    .header-icon-btn,
+    .chat-header-members,
+    .activities-row-item-clickable,
+    .activities-card-btn,
+    .asset-source-icon,
+    .event-editor-members-trigger,
+    .motion-card,
+    [data-motion='card'],
+    .ui-info-card--clickable
+  ):not(.motion-static):not([data-motion='none']):not(:disabled):not([aria-disabled='true']):active {
+    transform: scale(var(--interactive-press-scale, 0.97));
+    filter: brightness(var(--interactive-press-brightness, 0.97));
+  }
+
+  #{$popup-close-wave-selector}:not(:disabled):not([aria-disabled='true']):hover {
+    background-color: var(--popup-close-fill-color);
+  }
+
+  #{$popup-close-wave-selector}:not(:disabled):not([aria-disabled='true']):active {
+    background-color: var(--popup-close-click-fill-color);
+  }
+
+}
+
+@media (hover: none), (pointer: coarse) {
+  :where(
+    button,
+    a[href],
+    summary,
+    [role='button'],
+    [tabindex='0'],
+    .link-btn,
+    .popup-view-fab,
+    .popup-header-add-btn,
+    .activities-view-option,
+    .profile-status-select-wrap,
+    .profile-details-values-btn,
+    .profile-details-privacy-btn,
+    .profile-privacy-menu-option,
+    .popup-close,
+    .date-picker-btn,
+    .avatar-edit-btn,
+    .experience-form-close-btn,
+    .image-editor-grid button,
+    .image-stack-line,
+    .image-stack-hit-segment,
+    .mobile-profile-selector-close-btn,
+    .mobile-profile-selector-option,
+    .popup-panel-profile-selector .profile-filter-selector-clear,
+    .popup-panel-profile-selector .profile-filter-selector-chip,
+    .popup-panel-profile-selector .profile-selector-chip,
+    .item-action-menu-btn,
+    .experience-action-btn,
+    .header-icon-btn,
+    .chat-header-members,
+    .activities-row-item-clickable,
+    .activities-card-btn,
+    .asset-source-icon,
+    .event-editor-members-trigger,
+    .motion-card,
+    [data-motion='card'],
+    .ui-info-card--clickable
+  ):not(.motion-static):not([data-motion='none']):not(:disabled):not([aria-disabled='true']) {
+    transition:
+      transform var(--interactive-motion-duration, 160ms) var(--interactive-motion-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+      filter var(--interactive-motion-duration, 160ms) var(--interactive-motion-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+      box-shadow var(--interactive-motion-duration, 160ms) var(--interactive-motion-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+      background-color var(--interactive-motion-duration, 160ms) var(--interactive-motion-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+      border-color var(--interactive-motion-duration, 160ms) var(--interactive-motion-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+      color var(--interactive-motion-duration, 160ms) var(--interactive-motion-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+      opacity var(--interactive-motion-duration, 160ms) var(--interactive-motion-ease, cubic-bezier(0.22, 1, 0.36, 1));
+    transform-origin: center;
+  }
+
+  :where(
+    button,
+    a[href],
+    summary,
+    [role='button'],
+    [tabindex='0'],
+    .link-btn,
+    .popup-view-fab,
+    .popup-header-add-btn,
+    .activities-view-option,
+    .profile-status-select-wrap,
+    .profile-details-values-btn,
+    .profile-details-privacy-btn,
+    .profile-privacy-menu-option,
+    .popup-close,
+    .date-picker-btn,
+    .avatar-edit-btn,
+    .experience-form-close-btn,
+    .image-editor-grid button,
+    .image-stack-line,
+    .image-stack-hit-segment,
+    .mobile-profile-selector-close-btn,
+    .mobile-profile-selector-option,
+    .popup-panel-profile-selector .profile-filter-selector-clear,
+    .popup-panel-profile-selector .profile-filter-selector-chip,
+    .popup-panel-profile-selector .profile-selector-chip,
+    .item-action-menu-btn,
+    .experience-action-btn,
+    .header-icon-btn,
+    .chat-header-members,
+    .activities-row-item-clickable,
+    .activities-card-btn,
+    .asset-source-icon,
+    .event-editor-members-trigger,
+    .motion-card,
+    [data-motion='card'],
+    .ui-info-card--clickable
+  ):not(.motion-static):not([data-motion='none']):not(:disabled):not([aria-disabled='true']):active {
+    animation: global-mobile-touch-feedback 0.2s ease;
+    transform: scale(var(--interactive-press-scale, 0.97));
+    filter: brightness(var(--interactive-press-brightness, 0.97));
+  }
+
+  #{$popup-close-wave-selector}:not(:disabled):not([aria-disabled='true']):active {
+    background-color: var(--popup-close-click-fill-color);
+  }
+
+}

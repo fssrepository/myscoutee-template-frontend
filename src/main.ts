@@ -1,0 +1,116 @@
+import { bootstrapApplication } from '@angular/platform-browser';
+import { Injector, inject, provideAppInitializer } from '@angular/core';
+import { prepareDemoFailover, demoFailoverSeedWarmupNeeded, demoFailoverLocalUser, startDemoFailover } from './app/shared/core/common/demo-failover';
+
+type MutableConsole = Console & Record<string, (...args: unknown[]) => void>;
+
+declare global {
+  interface Window {
+    __myscouteeWarmup?: {
+      showNoNetwork?: () => void;
+      showFailure?: (title?: string, message?: string) => void;
+    };
+  }
+}
+
+const BOOTSTRAPPED_CLASS = 'app-bootstrapped';
+const BOOTSTRAP_RESUME_RELOAD_KEY = 'myscoutee-template.bootstrap.resume-reload.v1';
+const DEPLOYMENT_RECOVERY_KEY = 'myscoutee-template.deployment-recovery.v1';
+const BOOTSTRAP_RESUME_GRACE_MS = 12_000;
+
+const bootstrapStartedAt = Date.now();
+let bootstrapSettled = false;
+
+function silenceBrowserConsoleLogs(): void {
+  const browserConsole = globalThis.console as MutableConsole | undefined;
+  const logMethod = ['lo', 'g'].join('');
+  if (!browserConsole || typeof browserConsole[logMethod] !== 'function') {
+    return;
+  }
+  browserConsole[logMethod] = () => undefined;
+}
+
+function bindBootstrapResumeRecovery(): void {
+  window.addEventListener('pageshow', recoverBootstrapOnResume);
+  window.addEventListener('focus', recoverBootstrapOnResume);
+  document.addEventListener('visibilitychange', recoverBootstrapOnResume);
+}
+
+function unbindBootstrapResumeRecovery(): void {
+  window.removeEventListener('pageshow', recoverBootstrapOnResume);
+  window.removeEventListener('focus', recoverBootstrapOnResume);
+  document.removeEventListener('visibilitychange', recoverBootstrapOnResume);
+}
+
+function recoverBootstrapOnResume(): void {
+  if (bootstrapSettled || document.visibilityState === 'hidden') {
+    return;
+  }
+  if (Date.now() - bootstrapStartedAt < BOOTSTRAP_RESUME_GRACE_MS) {
+    return;
+  }
+  const attemptKey = `${location.origin}${location.pathname}${location.search}`;
+  try {
+    if (sessionStorage.getItem(BOOTSTRAP_RESUME_RELOAD_KEY) === attemptKey) {
+      return;
+    }
+    sessionStorage.setItem(BOOTSTRAP_RESUME_RELOAD_KEY, attemptKey);
+  } catch {
+    return;
+  }
+  window.location.reload();
+}
+
+function clearBootstrapResumeReloadGuard(): void {
+  try {
+    sessionStorage.removeItem(BOOTSTRAP_RESUME_RELOAD_KEY);
+    sessionStorage.removeItem(DEPLOYMENT_RECOVERY_KEY);
+  } catch {
+    // A blocked sessionStorage should not keep a healthy bootstrap marked stale.
+  }
+}
+
+function markBootstrapped(): void {
+  bootstrapSettled = true;
+  unbindBootstrapResumeRecovery();
+  clearBootstrapResumeReloadGuard();
+  document.documentElement.classList.add(BOOTSTRAPPED_CLASS);
+}
+
+function markBootstrapFailed(err: unknown): void {
+  bootstrapSettled = true;
+  unbindBootstrapResumeRecovery();
+  console.error(err);
+  window.__myscouteeWarmup?.showFailure?.(
+    'Unable to start',
+    'The app could not finish starting. Please check the network and retry.'
+  );
+}
+
+silenceBrowserConsoleLogs();
+bindBootstrapResumeRecovery();
+
+prepareDemoFailover()
+  .then(async () => {
+    const [{ App }, { appConfig }] = await Promise.all([import('./app/app'), import('./app/app.config')]);
+    const localUserId = demoFailoverLocalUser();
+    if (localUserId) {
+      appConfig.providers.push(provideAppInitializer(() => {
+        const injector = inject(Injector);
+        return import('./app/shared/core/local/seed/services/platform/demo-bootstrap.service').then(async module => {
+          const seed = injector.get(module.SeedDemoBootstrapService);
+          await seed.ensureDemoSelectorReady('member');
+          await seed.ensureUserReady(localUserId, 'member');
+        });
+      }));
+    }
+    const app = await bootstrapApplication(App, appConfig);
+    // Only demo sessions can use these seeds. Real sessions must not download
+    // and evaluate the demo builders while authentication is still starting.
+    if (demoFailoverSeedWarmupNeeded()) {
+      void import('./app/shared/core/local/seed/services/platform/demo-bootstrap.service').catch(() => undefined);
+    }
+    return app;
+  })
+  .then(() => { markBootstrapped(); startDemoFailover(); })
+  .catch(err => markBootstrapFailed(err));

@@ -1,0 +1,76 @@
+@use '@fssrepository/myscoutee-components/styles' as ui;
+@include ui.popup-shell();
+@include ui.form-controls();
+
+.profile-editor-popup-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.profile-editor-wrap {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0.6rem;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.profile-editor-header-card {
+  flex: 0 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.profile-editor-header-card > app-header-card {
+  display: block;
+}
+
+.profile-editor-scroll-area {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: block;
+  box-sizing: border-box;
+  padding-right: 0;
+  padding-bottom: 0.74rem;
+  scroll-padding-bottom: 0.74rem;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.profile-editor-flow-area {
+  min-height: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.profile-editor-flow {
+  display: block;
+  min-height: 100%;
+  height: auto;
+}
+
+.image-editor-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.58rem;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0.9rem;
+  box-sizing: border-box;
+}
+
+
+.profile-api-integration-action {
+  position: absolute;
+  right: 0.72rem;
+  bottom: 0.72rem;
+  z-index: 2;
+  max-width: calc(100% - 1.44rem);
+}

@@ -1,0 +1,129 @@
+@if (open()) {
+  <app-popup [model]="popupModel()" [zIndex]="2500">
+    <div class="integration-settings-body" [class.integration-settings-body--loading]="loading()" data-guide-field="integration-settings">
+      @if (loading()) {
+        <div class="integration-settings-loading" role="status" aria-busy="true">
+          <app-indicator kind="load-ring" state="loading"></app-indicator>
+          <span>{{ 'integration.loading' | i18n }}</span>
+        </div>
+      } @else if (settings(); as config) {
+        <section class="integration-settings-section" data-guide-field="integration-base-url">
+          <div class="integration-section-heading"><h3>{{ 'integration.base.url' | i18n }}</h3></div>
+          <app-copy-link [value]="baseUrl()" label="integration.base.url" copyLabel="integration.base.url.copy.aria"></app-copy-link>
+          @if (!adminMode) { <small>{{ 'integration.batch.maximum' | i18n }} {{ config.maxBatchSize }}</small> }
+        </section>
+
+        <section class="integration-settings-section" data-guide-field="integration-tokens">
+          <div class="integration-section-heading">
+            <div>
+              <h3>{{ 'integration.client.keys' | i18n }}</h3>
+              <small>{{ config.tokens.length }} / {{ config.maxActiveTokens }} {{ 'integration.token.active' | i18n }}</small>
+            </div>
+            <div class="integration-section-actions">
+              <app-menu
+                class="integration-generate-action"
+                data-guide-control="integration-generate"
+                kind="inline"
+                layout="row"
+                [model]="actionMenuModel"
+                [items]="generateTokenActions()"
+                (itemSelect)="onGenerateTokenAction($event)"
+              ></app-menu>
+            </div>
+          </div>
+
+          @if (config.tokens.length > 0) {
+            <div class="integration-token-list">
+              @for (token of config.tokens; track token.id) {
+                <article class="integration-token-row" data-guide-field="integration-token-row">
+                  <div class="integration-token-main">
+                    <div class="integration-token-title">
+                      <strong>{{ token.name }}</strong>
+                      <mat-icon
+                        class="integration-token-status"
+                        [class.integration-token-status--occupied]="token.claimedAt"
+                        [class.integration-token-status--available]="!token.claimedAt"
+                        [attr.title]="(token.claimedAt ? 'connected' : 'unconnected') | i18n"
+                        [attr.aria-label]="(token.claimedAt ? 'connected' : 'unconnected') | i18n"
+                      >{{ token.claimedAt ? 'lock' : 'content_copy' }}</mat-icon>
+                    </div>
+                    <div class="integration-credential-row">
+                      <app-copy-link [value]="revealedTokenId() === token.id ? revealedToken() : token.prefix + '…'"
+                        [disabled]="revealedTokenId() !== token.id || !revealedToken()"
+                        label="integration.client.keys" copyLabel="integration.token.copy.aria"></app-copy-link>
+                      <app-integration-access-button data-guide-field="integration-token-access"
+                        [clientId]="token.id" [clientName]="token.name"></app-integration-access-button>
+                    </div>
+                    @if (revealedTokenId() === token.id && revealedToken()) {
+                      <small>{{ 'integration.token.copy.now' | i18n }}</small>
+                    }
+                    <small class="integration-token-meta">
+                      <span>{{ 'integration.token.expires' | i18n }} {{ formatDate(token.expiresAt) }}</span>
+                    </small>
+                  </div>
+                  <div class="integration-token-actions">
+                    @if (token.claimedAddress) {
+                      <span class="integration-count-badge integration-count-badge--ip"
+                        [attr.title]="('integration.token.ip' | i18n) + ' ' + token.claimedAddress"
+                      >{{ 'integration.token.ip' | i18n }} {{ token.claimedAddress }}</span>
+                    }
+                    <app-menu
+                      class="integration-token-action"
+                      data-guide-control="integration-token-actions"
+                      kind="inline"
+                      layout="row"
+                      [model]="actionMenuModel"
+                      [items]="revokeTokenActions(token)"
+                      (itemSelect)="onTokenAction($event)"
+                    ></app-menu>
+                  </div>
+                </article>
+              }
+            </div>
+          } @else {
+            <p class="integration-empty-state">{{ 'integration.token.empty' | i18n }}</p>
+          }
+        </section>
+        <app-mcp-connections></app-mcp-connections>
+      }
+    </div>
+  </app-popup>
+  @if (helpOpen()) {
+    <app-popup [model]="helpPopupModel()" [zIndex]="2510">
+      <section class="integration-help-body">
+        <div>
+          @if (adminMode) { <p>{{ 'admin.api.help' | i18n }}</p> }
+          <section data-guide-field="integration-help-setup">
+            <h3>{{ 'mcp.connections' | i18n }}</h3>
+            <ol>
+              <li>{{ 'mcp.setup.enable' | i18n }}</li>
+              <li>{{ 'mcp.setup' | i18n }}</li>
+              <li>{{ 'mcp.setup.approve' | i18n }}</li>
+              <li>{{ 'mcp.setup.return' | i18n }}</li>
+              <li>{{ 'mcp.setup.revoke' | i18n }}</li>
+            </ol>
+          </section>
+          <section data-guide-field="integration-help-levels">
+            <h3>{{ 'integration.access.level' | i18n }}</h3>
+            <ul>
+              @for (mode of ['blocked', 'write', 'read', 'full']; track mode) {
+                <li><strong>{{ ('integration.access.' + mode) | i18n }}:</strong> {{ ('integration.access.' + mode + '.description') | i18n }}</li>
+              }
+            </ul>
+            <p>{{ 'integration.access.mcp.limit' | i18n }}</p>
+          </section>
+          <section data-guide-field="integration-help-roles">
+            <h3>{{ 'integration.roles.title' | i18n }}</h3>
+            <p>{{ 'integration.roles.help' | i18n }}</p>
+          </section>
+          <section data-guide-field="integration-help-manual">
+            <h3>{{ 'mcp.advanced' | i18n }}</h3>
+            <ul><li>{{ 'mcp.manual.help' | i18n }}</li><li>{{ 'mcp.manual.help.badge' | i18n }}</li></ul>
+            <p>{{ 'mcp.local.only' | i18n }}</p>
+          </section>
+
+        </div>
+      </section>
+    </app-popup>
+  }
+}

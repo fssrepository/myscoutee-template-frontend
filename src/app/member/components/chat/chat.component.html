@@ -1,0 +1,90 @@
+<app-popup [model]="listPopupModel">
+ <div class="activities-popup" data-guide-surface="chat">
+  <app-smart-list #channels data-guide-field="chat-list" [config]="listConfig" [loadPage]="loadChats" [itemTemplate]="chatTemplate" />
+ </div>
+</app-popup>
+<ng-template #chatTemplate let-chat let-groupLabel="groupLabel">
+ <single-row [row]="row(chat,groupLabel)" [clickable]="true" (rowClick)="open(chat)" />
+</ng-template>
+@if(selected();as chat){
+ <app-popup class="event-chat-popup-shell" [model]="chatPopupModel()" [zIndex]="2360" [attr.data-chat-id]="chat.id">
+  <div class="chat-popup-wrap" data-guide-surface="chat"><div class="chat-popup-box">
+   <app-smart-list #thread data-guide-field="chat-list" [config]="threadConfig" [loadPage]="loadMessages" [filters]="threadFilters()" [itemTemplate]="messageTemplate" (viewportItemsChange)="visibleMessages($event)" (menuItemSelect)="onMenu($event)" />
+   @if(typing().length){<div class="chat-typing-indicator" role="status">
+    <span class="chat-typing-indicator-users">@for(person of typing();track person.userId){<span data-i18n-ignore>{{person.userName||person.userInitials}}</span>} {{'is typing'|i18n}}</span>
+    <span class="chat-typing-indicator-dots" aria-hidden="true"><span></span><span></span><span></span></span>
+   </div>}
+   @if(!connected()){<p role="status">{{'chat.reconnecting'|i18n}}</p>}
+   <div class="chat-compose-box" data-guide-field="chat-compose">
+    @if(replyTarget();as reply){<div class="chat-reply-draft"><span class="chat-reply-draft-copy">
+     <strong>{{'Reply'|i18n}} · <span data-i18n-ignore>{{reply.sender}}</span></strong><small data-i18n-ignore>{{reply.text}}</small>
+     </span><button type="button" [attr.aria-label]="'Cancel reply'|i18n" (click)="replyTarget.set(null)"><mat-icon>close</mat-icon></button>
+    </div>}
+    @if(editing()){<div class="chat-reply-draft chat-edit-draft"><span><mat-icon>edit</mat-icon>{{'chat.editing'|i18n}}</span>
+     <button type="button" [attr.aria-label]="'Cancel edit'|i18n" (click)="cancelEdit()"><mat-icon>close</mat-icon></button>
+    </div>}
+    @if(emojiSuggestions().length){<div class="chat-ascii-emoji-panel" role="listbox" [attr.aria-label]="'Emoji suggestions'|i18n">
+     @for(suggestion of emojiSuggestions();track suggestion.token){<button type="button" role="option" (mousedown)="$event.preventDefault()" (click)="insertEmoji(suggestion.emoji)">
+      <span class="chat-ascii-emoji-panel__emoji">{{suggestion.emoji}}</span><span class="chat-ascii-emoji-panel__token">{{suggestion.token}}</span><small>{{suggestion.label}}</small>
+     </button>}
+    </div>}
+    <textarea name="message" rows="1" [ngModel]="draft" (ngModelChange)="draftChanged($event)" (input)="resizeComposerTextarea()" (keydown)="composerKey($event)" [disabled]="busy()" [attr.aria-label]="'chat.message'|i18n" [placeholder]="'Write message'|i18n" maxlength="10000"></textarea>
+    <button type="button" class="chat-send-btn" data-guide-field="chat-send" (click)="send()" [disabled]="busy()||!draft.trim()" [attr.aria-label]="(editing()?'save':'Send message')|i18n"><mat-icon>{{editing()?'check':'send'}}</mat-icon></button>
+   </div>
+   @if(error()){<p role="alert">{{error()|i18n}}</p>}
+  </div></div>
+ </app-popup>
+}
+<ng-template #messageTemplate let-message let-groupLabel="groupLabel">
+ <article class="chat-message" data-guide-field="chat-message-actions" [class.mine]="message.mine" [class.chat-message-selected]="selectedMessageId()===message.id" [class.chat-message-deleted]="message.deletedAtIso" [class.chat-message-pending]="message.deliveryState==='pending'" [class.chat-message-timed-out]="message.deliveryState==='timed-out'" [attr.data-group-label]="groupLabel" [attr.data-chat-message-id]="message.id">
+  @if(!message.deletedAtIso&&message.replyTo;as reply){<button type="button" class="chat-message-reply-context" [attr.aria-label]="'Open replied message'|i18n" (click)="jumpTo(reply.id);$event.stopPropagation()">
+   <span class="chat-message-reply-label"><mat-icon>reply</mat-icon><span data-i18n-ignore>{{reply.sender}}</span></span><span class="chat-message-reply-quote"><span class="chat-message-reply-title" data-i18n-ignore>{{reply.text}}</span></span>
+  </button>}
+  <div class="chat-bubble" tabindex="0" role="button" [attr.aria-label]="'More message actions'|i18n" (click)="selectMessage(message)" (keydown.enter)="selectMessage(message);$event.stopPropagation()" (keydown.space)="selectMessage(message);$event.preventDefault();$event.stopPropagation()">
+   @if(!message.deletedAtIso){<span class="chat-sender-avatar" [class]="'user-color-'+message.senderAvatar.gender">
+    @if(message.senderAvatar.gender==='system'){<mat-icon>auto_awesome</mat-icon>}
+    @else if(message.senderAvatar.imageUrl){<img [src]="message.senderAvatar.imageUrl" [alt]="message.sender" loading="lazy" decoding="async"/>}
+    @else{<span data-i18n-ignore>{{message.senderAvatar.initials}}</span>}
+   </span>}
+   <div class="chat-message-content">
+    @if(!message.deletedAtIso){<div class="chat-meta-row"><span class="chat-sender-name" data-i18n-ignore>{{message.sender}}</span><span class="chat-time-chip" data-i18n-ignore>{{message.time}}</span></div>}
+    @if(message.deletedAtIso){<p class="chat-line chat-line-deleted">{{'chat.message.deleted'|i18n}}</p>}
+    @else{<p class="chat-line" data-i18n-ignore>{{message.text}}</p>@if(message.editedAtIso){<span class="chat-edited-label">{{'chat.edited'|i18n}}</span>}}
+   </div>
+   @if(!message.deletedAtIso&&message.pinnedAtIso){<span class="chat-pin-badge" [attr.aria-label]="'Pinned message'|i18n"><mat-icon>push_pin</mat-icon></span>}
+   @if(!message.deletedAtIso&&message.reactions?.length){<button type="button" class="chat-reaction-summary" [attr.aria-label]="'Reactions'|i18n" (click)="details.set(message);$event.stopPropagation()">@for(reaction of reactionSummary(message);track reaction.emoji){<span>{{reaction.emoji}} {{reaction.count}}</span>}</button>}
+   @if(!message.deletedAtIso&&selectedMessageId()===message.id){<div class="chat-message-tools" (click)="$event.stopPropagation()">
+    <button type="button" [disabled]="busy()" [attr.aria-label]="'Reply'|i18n" (click)="reply(message)"><mat-icon>reply</mat-icon></button>
+    <button type="button" [disabled]="busy()" [class.chat-tool-btn-open]="reactionMessageId()===message.id" [attr.aria-label]="'React'|i18n" (click)="reactionMessageId.set(reactionMessageId()===message.id?'':message.id)"><mat-icon>{{reactionMessageId()===message.id?'add_reaction':'mood'}}</mat-icon></button>
+    <app-menu-trigger class="chat-message-action-trigger" [menuId]="'chat-message-action:'+message.id" kind="select" [trigger]="actionTrigger" [items]="menuItems(message)" panelAlign="auto"/>
+   </div>}
+   @if(reactionMessageId()===message.id){<div class="chat-quick-reactions" (click)="$event.stopPropagation()">
+    @for(emoji of quickReactions;track emoji){<button type="button" [disabled]="busy()" (click)="react(message,emoji)">{{emoji}}</button>}
+    <app-menu class="chat-emoji-menu" kind="select" title="Search emoji" [trigger]="emojiTrigger" [model]="emojiMenu" [filterable]="true" (itemSelect)="chooseEmoji(message,$event)"/>
+   </div>}
+   @if(!message.deletedAtIso&&message.readBy.length){<div class="chat-readers">
+    @for(reader of message.readBy;track reader.id){<span class="chat-reader" [class]="'user-color-'+reader.gender">
+     @if(reader.imageUrl){<img [src]="reader.imageUrl" [alt]="reader.initials" loading="lazy" decoding="async"/>}@else{<span data-i18n-ignore>{{reader.initials}}</span>}
+    </span>}
+   </div>}
+  </div>
+ </article>
+</ng-template>
+<app-chat-call-popup [zIndex]="2460"/>
+@if(membersOpen()){<app-popup [model]="membersModel" [zIndex]="2460"><app-smart-list [config]="membersConfig" [loadPage]="loadMembers" [itemTemplate]="memberTemplate"/></app-popup>}
+<ng-template #memberTemplate let-member><single-row [row]="memberRow(member)"/></ng-template>
+@if(pinsOpen()){
+ <app-popup [model]="pinsModel" [zIndex]="2460"><app-smart-list [config]="pinsConfig" [loadPage]="loadPins" [itemTemplate]="pinTemplate"/></app-popup>
+}
+<ng-template #pinTemplate let-message>
+ <button type="button" class="chat-pinned-message" (click)="jumpTo(message.id)">
+  <span class="chat-sender-avatar" [class]="'user-color-'+message.senderAvatar.gender">@if(message.senderAvatar.imageUrl){<img [src]="message.senderAvatar.imageUrl" [alt]="message.sender"/>}@else{<span data-i18n-ignore>{{message.senderAvatar.initials}}</span>}</span>
+  <span class="chat-pinned-message-content"><span class="chat-meta-row"><strong class="chat-sender-name" data-i18n-ignore>{{message.sender}}</strong><span class="chat-time-chip" data-i18n-ignore>{{message.time}}</span></span><span class="chat-line" data-i18n-ignore>{{message.text}}</span></span>
+  <span class="chat-pin-badge chat-pinned-dialog-pin"><mat-icon>push_pin</mat-icon></span>
+ </button>
+</ng-template>
+@if(details();as message){
+ <app-popup [model]="detailsModel" [zIndex]="2460"><div class="chat-reaction-list">
+  @for(reaction of message.reactions;track reaction.userId){<div class="chat-reaction-row"><span class="chat-reaction-avatar" [class]="'user-color-'+reaction.userGender" data-i18n-ignore>{{reaction.userInitials}}</span><strong data-i18n-ignore>{{reaction.userName}}</strong><span class="chat-reaction-row-emoji">{{reaction.emoji}}</span></div>}
+ </div></app-popup>
+}

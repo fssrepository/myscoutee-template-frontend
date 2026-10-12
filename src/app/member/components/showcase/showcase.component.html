@@ -1,0 +1,5 @@
+<div class="activities-popup" data-guide-surface="home">
+  <app-smart-list data-guide-field="activity-list" [config]="config" [loadPage]="service.loadPage" [view]="view()"
+    [itemTemplate]="cardTemplate" />
+  <ng-template #cardTemplate let-item><app-info-card [card]="card(item)" /></ng-template>
+</div>

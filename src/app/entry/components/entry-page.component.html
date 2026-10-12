@@ -1,0 +1,39 @@
+<main class="landing" appLandingGuideSurface="landing.entry">
+  <header class="entry-header">
+    <a class="brand" href="./" [attr.aria-label]="deployment.branding().productName"><app-deployment-brand [branding]="deployment.branding()" /></a>
+    <nav class="entry-actions" data-guide-field="entry-login" aria-label="Account">
+      <button class="entry-auth-btn" type="button" matRipple [matRippleColor]="'rgba(255, 255, 255, 0.24)'"
+        [disabled]="busy()" (click)="requestEntry('login')">
+        <mat-icon>login</mat-icon><span>{{ 'landing.login' | i18n }}</span>
+      </button>
+    </nav>
+  </header>
+  <section class="entry-hero-content">
+    <h1 data-i18n-ignore>Templates</h1>
+    <app-menu class="entry-explore" kind="inline" layout="row" [model]="{ actionSizing: 'content' }"
+      [items]="exploreItems()" (itemSelect)="requestEntry('explore')" />
+  </section>
+  @if (error()) { <p class="entry-error" role="alert">{{ error() | i18n }}</p> }
+  @if (pwa.appVersionLabel()) { <span class="version" data-i18n-ignore>{{ pwa.appVersionLabel() }}</span> }
+</main>
+<app-explanation-launcher [introduce]="!busy()"/>
+@if (consentOpen()) { <app-document-viewer [config]="privacyConfig()" (action)="consentAction($event)" /> }
+<app-entry-firebase-auth-popup [open]="authOpen()" [busy]="session.firebaseBusy()" [statusMessage]="session.firebaseNotice() || error()" (closeRequested)="authOpen.set(false)" (authRequested)="authenticate($event)" />
+
+@defer (when setup.isOpen()) { <app-setup-popup/> }
+@if (editor.open() && !editor.component()) {
+  <app-popup [model]="editor.loadingModel">
+    <div class="profile-editor-loading" role="status" [attr.aria-busy]="!editor.loadFailed()">
+      @if (editor.loadFailed()) {
+        <mat-icon>error_outline</mat-icon>
+        <button type="button" (click)="editor.ensureLoaded()">{{ 'try.again' | i18n }}</button>
+      } @else {
+        <app-indicator kind="spinner-ring" state="loading" />
+        <span>{{ 'loading.profile' | i18n: 'Loading profile' }}</span>
+      }
+    </div>
+  </app-popup>
+}
+@if (editor.open() && editor.component(); as profileComponent) {
+  <ng-container *ngComponentOutlet="profileComponent" />
+}

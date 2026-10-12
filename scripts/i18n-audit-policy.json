@@ -1,0 +1,9 @@
+{
+  "optionDefinitions": [],
+  "additionalNotificationKinds": [],
+  "dynamicNotificationKinds": [
+    "chat-message",
+    "feedback-resolved",
+    "scheduled-template"
+  ]
+}

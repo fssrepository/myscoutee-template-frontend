@@ -1,0 +1,83 @@
+@if (role === 'operator') {
+  <app-operator-page (actionSelected)="selectSetting($event)" />
+} @else {
+<div class="game-page" data-guide-surface="home">
+  <app-home-header [branding]="deployment.branding()" [showControls]="false" />
+</div>
+}
+<div class="navigator-trigger-rail">
+  <div class="navigator-trigger-rail-inner">
+    <app-menu class="user-selector-menu" data-guide-field="member-avatar" kind="inline" layout="row"
+      [items]="avatar()" (itemSelect)="menuOpen.set(!menuOpen())" />
+  </div>
+</div>
+@if (menuOpen()) {
+  <div class="user-menu-backdrop open" (click)="menuOpen.set(false)"></div>
+}
+  <aside class="user-menu-panel" [class.open]="menuOpen()" [attr.data-guide-surface]="menuOpen() ? 'navigation' : null" [attr.inert]="menuOpen() ? null : ''" [attr.aria-label]="'navigation' | i18n" (keydown.escape)="menuOpen.set(false)">
+    <div class="navigator-menu-header">
+      <app-header-card class="navigator-menu-header-card" [model]="header()"
+        editGuideField="navigation-profile" (edit)="editProfile()" />
+      <div class="navigator-header-toolbar">
+        <div class="navigator-header-actions">
+          <app-menu class="navigator-header-actions-menu" kind="inline"
+            [model]="{ nodes: [{ id: 'navigator-header-actions', items: headerActions() }] }"
+            (itemSelect)="headerAction($event.id)" />
+          <button type="button" class="user-menu-close-btn" data-guide-field="close"
+            [attr.aria-label]="'Close menu' | i18n" (click)="$event.stopPropagation(); menuOpen.set(false)">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="user-menu-content">
+      @if (role === 'member') {
+        <app-menu kind="inline" layout="grid" [model]="pages()" (itemSelect)="changePage($event.id)" />
+      }
+    </div>
+  </aside>
+@if (role === 'member' && page() && profiles.activeUserProfile()) {
+  @if (page() === 'chat') { <app-template-chat (closed)="changePage(null)"/> }
+  @else { <app-popup [model]="pagePopup()"><app-showcase/></app-popup> }
+}
+@if (editor.open() && !editor.component()) {
+  <app-popup [model]="editor.loadingModel">
+    <div class="profile-editor-loading" role="status" [attr.aria-busy]="!editor.loadFailed()">
+      @if (editor.loadFailed()) {
+        <mat-icon>error_outline</mat-icon>
+        <button type="button" (click)="editor.ensureLoaded()">{{ 'try.again' | i18n }}</button>
+      } @else {
+        <app-indicator kind="spinner-ring" state="loading" />
+        <span>{{ 'loading.profile' | i18n: 'Loading profile' }}</span>
+      }
+    </div>
+  </app-popup>
+}
+@if (editor.open() && editor.component(); as profileComponent) {
+  <ng-container *ngComponentOutlet="profileComponent" />
+}
+@defer (when profile.settingsPopup()) { <app-profile-settings-popups/> }
+@defer (when notifications.isOpen()) { @if (notifications.isOpen()) { <app-notification-center-popup/> } }
+@if (profiles.activeUserId() && (notificationAttentionVisible() || guide.launcherVisible())) {
+<div class="floating-launcher-rail" [style.z-index]="floatingLauncherZIndex()"
+  [class.is-chat-open]="page() === 'chat'" [class.is-popup-open]="popups.visible()">
+  <div class="floating-launcher-slot floating-launcher-slot--guide">
+    @if (guide.launcherVisible()) { <app-explanation-launcher [embedded]="true" /> }
+  </div>
+  <div class="floating-launcher-slot">
+    @if (notificationAttentionVisible()) {
+      <app-floating-launcher class="notification-attention-menu"
+        [trigger]="notificationAttentionTrigger()"
+        [position]="notifications.dragPosition()" [layer]="floatingLauncherZIndex()" (positionChange)="notifications.setDragPosition($event)"
+        (dismissed)="dismissNotificationLauncher()" (itemSelect)="openNotifications($event.sourceEvent)" />
+    }
+  </div>
+</div>
+}
+
+@defer (when setup.isOpen()) { <app-setup-popup/> }
+
+
+@defer (when configurationOpen()) { @if (configurationOpen()) { <app-operator-configuration-popup (closed)="configurationOpen.set(false)"/> } }
+
+@defer (when updateOpen()) { @if (updateOpen()) { <app-operator-update-popup (closed)="updateOpen.set(false)"/> } }

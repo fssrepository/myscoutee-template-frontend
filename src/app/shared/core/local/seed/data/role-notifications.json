@@ -1,0 +1,21 @@
+[
+  {
+    "role": "operator",
+    "kind": "release-available",
+    "title": "New version",
+    "message": "A new version is available. Review it before installing.",
+    "category": "app-admin",
+    "sourceType": "operator",
+    "sourceId": "demo-role-release-available",
+    "actionPath": "/operator?notificationTarget=updates",
+    "payload": {
+      "demo": "true",
+      "seedVersion": "role-v1",
+      "notification_title_key": "notification.kind.release-available.title",
+      "notification_message_key": "notification.kind.release-available.message",
+      "notification_tone": "info",
+      "roleTarget": "updates",
+      "releaseVersion": ""
+    }
+  }
+]

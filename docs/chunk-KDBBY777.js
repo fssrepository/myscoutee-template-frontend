@@ -1,0 +1,1 @@
+var e=class{workspaceGroupId;id="";name="";city="";completion=0;headline="";about="";initials="";gender="man";profileFormVersion;locationCoordinates;partitionKey;images;profileStatus="public";previousProfileStatus;deletedAtIso;admin;operator;notificationPreferences;notificationDevices;activities={}};export{e as a};

@@ -1,0 +1,84 @@
+@use 'sass:color';
+@use '@fssrepository/myscoutee-components/styles/contextual-colors' as contextual;
+
+@mixin deployment-semantic-theme {
+  --deployment-font-family: 'Roboto', 'Segoe UI', sans-serif;
+  --deployment-page-background: color-mix(in srgb, var(--deployment-brand-primary) 5%, #f7f9fd);
+  --deployment-panel-background: color-mix(in srgb, var(--deployment-brand-soft) 22%, #ffffff);
+  --deployment-panel-border: color-mix(in srgb, var(--deployment-brand-text) 16%, transparent);
+  --deployment-surface-background: color-mix(in srgb, var(--deployment-brand-soft) 14%, #ffffff);
+  --deployment-surface-strong: #ffffff;
+  --deployment-surface-muted: color-mix(in srgb, var(--deployment-brand-soft) 28%, #f4f7fb);
+  --deployment-text-main: var(--deployment-brand-text);
+  --deployment-text-muted: color-mix(in srgb, var(--deployment-brand-text) 72%, transparent);
+  --deployment-line: color-mix(in srgb, var(--deployment-brand-text) 14%, transparent);
+  --deployment-hero-background: linear-gradient(
+    120deg,
+    var(--deployment-brand-primary) 0%,
+    var(--deployment-brand-secondary) 50%,
+    var(--deployment-brand-accent) 100%
+  );
+  --deployment-hero-text: #ffffff;
+  --deployment-hero-text-muted: rgba(255, 255, 255, 0.94);
+  --deployment-hero-panel: color-mix(in srgb, var(--deployment-brand-text) 24%, transparent);
+  --deployment-control-primary-background: #ffffff;
+  --deployment-control-primary-text: var(--deployment-brand-primary);
+  --deployment-control-secondary-background: color-mix(in srgb, var(--deployment-brand-soft) 72%, #ffffff);
+  --deployment-control-secondary-text: var(--deployment-brand-text);
+  --deployment-card-background: linear-gradient(
+    180deg,
+    #ffffff 0%,
+    color-mix(in srgb, var(--deployment-brand-soft) 20%, #f7faff) 100%
+  );
+  --deployment-card-border: color-mix(in srgb, var(--deployment-brand-primary) 24%, transparent);
+  --deployment-card-blue: var(--deployment-brand-primary);
+  --deployment-card-purple: var(--deployment-brand-secondary);
+  --deployment-card-pink: color-mix(in srgb, var(--deployment-brand-secondary) 62%, var(--deployment-brand-accent));
+  --deployment-card-orange: var(--deployment-brand-accent);
+  --deployment-footer-background: color-mix(in srgb, var(--deployment-brand-text) 88%, #07101e);
+  --deployment-footer-text: color-mix(in srgb, var(--deployment-brand-soft) 78%, #ffffff);
+  --deployment-footer-muted: color-mix(in srgb, var(--deployment-brand-soft) 64%, transparent);
+  --deployment-footer-line: color-mix(in srgb, var(--deployment-brand-soft) 18%, transparent);
+  --deployment-footer-accent: linear-gradient(
+    90deg,
+    var(--deployment-brand-primary),
+    var(--deployment-brand-secondary),
+    var(--deployment-brand-accent)
+  );
+}
+
+:root {
+  --deployment-brand-primary: #4f5de7;
+  --deployment-brand-secondary: #8458eb;
+  --deployment-brand-accent: #f1569a;
+  --deployment-brand-soft: #e9edff;
+  --deployment-brand-text: #1f3a63;
+  --deployment-brand-shadow: rgba(79, 93, 231, 0.26);
+  @include deployment-semantic-theme;
+}
+
+// Landing themes are shipped with the application and follow the existing mode selector.
+// Keep the mode hue recognizable and retain distinct stops in the shared hero/button gradient.
+$landing-mode-colors: (
+  dating: contextual.$rose-icon,
+  work: contextual.$blue-icon,
+  community: contextual.$green-icon
+);
+@each $mode, $mode-color in $landing-mode-colors {
+  :root[data-landing-mode='#{$mode}'] {
+    $primary: color.mix(contextual.$violet-icon, $mode-color, 55%);
+    @if $mode == community { $primary: color.mix(contextual.$green-icon, #142437, 92%); }
+    --deployment-brand-primary: #{$primary};
+    @if $mode == community {
+      --deployment-brand-secondary: #{contextual.$teal-icon};
+      --deployment-brand-accent: #{color.mix(color.mix(contextual.$green-icon, #8fa83e, 45%), #142437, 78%)};
+    } @else {
+      --deployment-brand-secondary: #{contextual.$violet-icon};
+      --deployment-brand-accent: #{$mode-color};
+    }
+    --deployment-brand-soft: #{color.mix($primary, #ffffff, 14%)};
+    --deployment-brand-text: #{color.mix($primary, #142437, 24%)};
+    --deployment-brand-shadow: #{color.change($primary, $alpha: .24)};
+    @include deployment-semantic-theme;
+  }
+}

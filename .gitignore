@@ -1,0 +1,57 @@
+# See https://docs.github.com/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
+
+# Local agent builds, measurements and temporary test configurations.
+# Previously tracked test helpers remain versioned.
+/.agent/
+
+# Compiled output
+/dist
+/dev
+/e2e
+/local
+/prod
+/tmp
+/out-tsc
+/bazel-out
+
+# Node
+/node_modules
+npm-debug.log
+yarn-error.log
+
+# IDEs and editors
+.idea/
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/mcp.json
+.history/*
+
+# Miscellaneous
+/.angular/cache
+.sass-cache/
+/connect.lock
+/coverage
+/libpeerconnection.log
+testem.log
+/typings
+__screenshots__/
+/keys/*.json
+docs/keys/firebase.config.json
+*-firebase-adminsdk-*.json
+!/keys/*.example.json
+/src/app/shared/core/base/services/test/
+
+# System files
+.DS_Store
+Thumbs.db

@@ -1,2 +1,54 @@
-# myscoutee-template-frontend
-myscoutee template frontend
+# MyScoutee Template Frontend
+
+A minimal Angular application built from MyScoutee's reusable foundations:
+member, administrator and operator screens, profiles, consent, SmartList,
+chat and video calls. Shared components, localization, notifications and guides
+keep the original application's behavior.
+
+| Explore | Link |
+| --- | --- |
+| Live demo | [Open the browser-local demo](https://fssrepository.github.io/myscoutee-template-frontend/) |
+| Full project and backend | [MyScoutee Template](https://github.com/fssrepository/myscoutee-template) |
+| Developer and operator guide | [PDF](https://github.com/fssrepository/myscoutee-template/blob/master/guides/manuals/MyScoutee_Template_Getting_Started_EN.pdf) |
+| Shared UI library | [MyScoutee Components](https://github.com/fssrepository/myscoutee-components) |
+
+## Run locally
+
+```sh
+git clone --recurse-submodules https://github.com/fssrepository/myscoutee-template-frontend.git
+cd myscoutee-template-frontend
+npm ci
+npm start
+```
+
+Open `http://localhost:4200`. The local mode uses seeded IndexedDB data and
+needs no backend. Live messaging and calls require the backend deployment.
+For the complete development stack, follow the parent project's guide.
+
+## Develop and build
+
+| Command | Purpose |
+| --- | --- |
+| `npm run start:dev` | Frontend with the development HTTP backend |
+| `npm test -- --watch=false` | Angular tests |
+| `npm run build:prod` | Production HTTP application in `prod/` |
+| `npm run build:github` | Browser-local Pages application in `docs/` |
+
+The existing scripts build the `components` submodule before the application.
+Local and HTTP adapters share the same contracts; see the
+[core domain map](src/app/shared/core/README.md).
+
+## GitHub Pages
+
+Run `npm run build:github` and commit the generated `docs/` directory.
+The [Pages workflow](.github/workflows/pages.yml) publishes it automatically
+after every push to `master`; it can also be started manually from **Actions**.
+In **Settings → Pages**, the source is **GitHub Actions**.
+The site uses `/myscoutee-template-frontend/`, including deep-link redirects.
+
+## License
+
+Based on [MyScoutee](https://github.com/fssrepository/myscoutee)
+by MyScoutee (fssrepository). Copyright © 2026, fssrepository.
+Licensed under [CC BY 4.0](LICENSE); see [BRANDING.md](BRANDING.md)
+for logo restrictions.
