@@ -34,7 +34,8 @@ const sessionGuard: CanActivateFn = async (route, state) => {
    if (!consent || consent.revisionId !== revision.id || consent.revisionVersion < revision.version) return entry();
   }
   const role = user.operator ? 'operator' : user.admin ? 'admin' : 'member';
-  return role === route.data['role'] ? true : router.createUrlTree([role === 'member' ? '/home' : '/' + role]);
+  return route.data['allowRoleProfiles'] === true || role === route.data['role']
+   ? true : router.createUrlTree([role === 'member' ? '/home' : '/' + role]);
  } catch { return entry(); }
 };
 
@@ -49,7 +50,7 @@ const publicContent: ResolveFn<void> = async () => {
 export const routes: Routes = [
  { path: '', pathMatch: 'full', redirectTo: 'entry' },
  { path: 'entry', resolve: { content: publicContent }, loadComponent: () => import('./entry/components/entry-page.component').then(m => m.EntryPageComponent) },
- { path: 'mcp/authorize', canActivate: [sessionGuard], data: { role: 'member' }, loadComponent: () => import('./profile/components/integration-settings-popup/mcp-authorization.component').then(m => m.McpAuthorizationComponent) },
+ { path: 'mcp/authorize', canActivate: [sessionGuard], data: { allowRoleProfiles: true }, loadComponent: () => import('./profile/components/integration-settings-popup/mcp-authorization.component').then(m => m.McpAuthorizationComponent) },
  { path: 'home', canActivate: [sessionGuard], data: { role: 'member' }, loadComponent: () => import('./member/components/member-page.component').then(m => m.MemberPageComponent) },
  { path: 'admin', canActivate: [sessionGuard], data: { role: 'admin' }, loadComponent: () => import('./member/components/member-page.component').then(m => m.MemberPageComponent) },
  { path: 'operator', canActivate: [sessionGuard], data: { role: 'operator' }, loadComponent: () => import('./member/components/member-page.component').then(m => m.MemberPageComponent) },
