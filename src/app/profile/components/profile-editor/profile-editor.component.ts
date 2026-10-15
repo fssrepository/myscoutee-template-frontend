@@ -65,6 +65,7 @@ export class ProfileEditorComponent {
       id: `profile-status-${option.value}`, label: option.value, icon: option.icon,
       kind: 'radio' as const, value: option.value,
       active: option.value === currentStatus, checked: option.value === currentStatus,
+      showCheck: true,
       palette: this.profileStatusPalette(option.value), surface: 'tinted' as const
     }));
   }

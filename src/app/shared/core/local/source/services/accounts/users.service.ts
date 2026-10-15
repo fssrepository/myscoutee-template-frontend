@@ -49,7 +49,7 @@ export class LocalUsersService extends LocalRouteDelayService implements UserSer
     const record = this.usersRepository.queryUserById(userId.trim());
     if (!record) return null;
     const user = LocalUsersMapper.toDto(record);
-    const counters = { ...user.activities, notifications: this.notifications.unreadCount(user.id) };
+    const counters = { ...user.activities, notifications: user.activities.notifications ?? 0 };
     return { userId: user.id, profileStatus: user.profileStatus, locationCoordinates: user.locationCoordinates,
       notificationDevices: user.notificationDevices, counters,
       cursor: `${user.id.replace(/:/g, '%3A')}:${counters.chats ?? 0}:${counters.notifications}:${JSON.stringify(counters.chat?.supportCases ?? {})}:${user.profileStatus}`,
@@ -137,25 +137,29 @@ export class LocalUsersService extends LocalRouteDelayService implements UserSer
   return { user: record ? LocalUsersMapper.toDto(record) : null };
  }
  async saveUserProfile(user: UserDto): Promise<UserDto | null> {
-  if (!user?.id?.trim()) return null;
-  await this.usersRepository.whenReady();
-  await this.validateLocationForSave(user.locationCoordinates);
-  const saved = this.usersRepository.upsertUser(LocalUsersMapper.toRecord(user));
-  await Promise.all([this.usersRepository.flushToIndexedDb(), this.waitForRouteDelay(LocalUsersService.USER_BY_ID_ROUTE)]);
-  return LocalUsersMapper.toDto(saved);
+   return this.withRouteDelay(LocalUsersService.USER_BY_ID_ROUTE, async (): Promise<UserDto | null> => {
+    if (!user?.id?.trim()) return null;
+    await this.usersRepository.whenReady();
+    await this.validateLocationForSave(user.locationCoordinates);
+    const saved = this.usersRepository.upsertUser(LocalUsersMapper.toRecord(user));
+    await this.usersRepository.flushToIndexedDb();
+    return LocalUsersMapper.toDto(saved);
+   });
  }
  async deleteUser(request: UserDeleteRequestDto, signal?: AbortSignal): Promise<UserSubmitActionResponseDto> {
-  await Promise.all([this.usersRepository.whenReady(), this.waitForRouteDelay(LocalUsersService.USER_BY_ID_ROUTE, signal)]);
-  const user = this.usersRepository.queryUserById(request.userId.trim());
-  if (user) {
-   this.usersRepository.upsertUser({
-    ...user, profileStatus: 'deleted',
-    previousProfileStatus: user.profileStatus === 'deleted' ? user.previousProfileStatus ?? 'public' : user.profileStatus,
-    deletedAtIso: new Date().toISOString()
-   });
-   await this.usersRepository.flushToIndexedDb();
-  }
-  return { submitted: true, message: null };
+   return this.withRouteDelay(LocalUsersService.USER_BY_ID_ROUTE, async (): Promise<UserSubmitActionResponseDto> => {
+    await this.usersRepository.whenReady();
+    const user = this.usersRepository.queryUserById(request.userId.trim());
+    if (user) {
+     this.usersRepository.upsertUser({
+      ...user, profileStatus: 'deleted',
+      previousProfileStatus: user.profileStatus === 'deleted' ? user.previousProfileStatus ?? 'public' : user.profileStatus,
+      deletedAtIso: new Date().toISOString()
+     });
+     await this.usersRepository.flushToIndexedDb();
+    }
+    return { submitted: true, message: null };
+   }, signal);
  }
   async logoutUser(
     _request: UserLogoutRequestDto,

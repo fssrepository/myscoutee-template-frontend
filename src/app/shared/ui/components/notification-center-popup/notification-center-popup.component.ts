@@ -119,6 +119,8 @@ export class NotificationCenterPopupComponent implements OnDestroy {
       palette: value === 'new' ? 'rose' : 'violet',
       surface: 'tinted',
       active: bucket === value,
+      checked: bucket === value,
+      showCheck: true,
       counter: value === 'new' && unreadCount > 0
         ? { value: unreadCount, max: 99 }
         : null,
@@ -141,10 +143,10 @@ export class NotificationCenterPopupComponent implements OnDestroy {
     defaultFilters: { bucket: 'new' },
     emptyLabel: 'No notifications',
     emptyDescription: 'New messages and updates will appear here.',
-    showStickyHeader: false,
+    showStickyHeader: true,
     listLayout: 'stack',
-    snapMode: 'none',
-    scrollPaddingTop: '0.5rem',
+    snapMode: 'mandatory',
+    scrollPaddingTop: '2.6rem',
     pollIntervalMs: () => this.store.pollIntervalMs(),
     pollDelta: {
       revision: item => item.revision,

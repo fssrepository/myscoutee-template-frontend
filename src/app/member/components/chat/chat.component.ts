@@ -86,6 +86,7 @@ export class ChatComponent implements OnDestroy {
  protected readonly selected=signal<ChatDTO|null>(null);
  protected readonly busy=signal(false);
  protected readonly error=signal('');
+ protected readonly loadError=signal<string|null>(null);
  protected readonly connected=signal(true);
  protected readonly editing=signal<ChatMessageDto|null>(null);
  protected draft='';
@@ -122,6 +123,8 @@ export class ChatComponent implements OnDestroy {
  protected readonly loadMessages:SmartListLoadPage<ChatMessageDto>=(query)=>defer(()=>{
   const chat=this.selected();
   if(!chat) throw new Error('Chat unavailable');
+  const generation=this.generation;
+  if(query.page===0)this.loadError.set(null);
   const token=this.notifications.captureUnreadSyncToken();
   return from(this.chats.queryChatMessagesPage(chat,query).then(page=>{
    if(typeof page.notificationUnread==='number')this.notifications.applyRealtimeUnreadCount(token,page.notificationUnread);
@@ -131,6 +134,9 @@ export class ChatComponent implements OnDestroy {
    const ids=new Set(receipt.messageIds);
    return {...page,items:page.items.map(message=>ids.has(message.id)&&!message.readBy.some(reader=>reader.id===receipt.userId)
     ? {...message,readBy:[...message.readBy,{id:receipt.userId,initials:receipt.userInitials,gender:receipt.userGender,imageUrl:receipt.userImageUrl}]}:message)};
+  }).catch(error=>{
+   if(generation===this.generation&&query.page===0)this.loadError.set('chat.unavailable');
+   throw error;
   }));
  });
  protected row(chat:ChatDTO,groupLabel?:string):SingleRowData{return {...ActivityChatSingleRowConverter.convert(chat,{activeUser:this.profiles.activeUserProfile()!,resolveUserById:id=>this.profiles.getUserProfile(id)}),groupLabel};}
@@ -141,7 +147,7 @@ export class ChatComponent implements OnDestroy {
    if(this.destroyed||generation!==this.generation)stop();else this.disconnect=stop;
   } catch {if(generation===this.generation)this.error.set('chat.connection.failed');}
  }
- protected close():void{this.stopTyping();this.clearRemoteTyping();this.selectedMessageId.set('');this.reactionMessageId.set('');this.replyTarget.set(null);this.details.set(null);this.pinsOpen.set(false);this.membersOpen.set(false);this.retry=null;this.generation++;this.disconnect?.();this.disconnect=null;this.selected.set(null);this.editing.set(null);this.draft='';this.error.set('');this.connected.set(true);}
+ protected close():void{this.stopTyping();this.clearRemoteTyping();this.selectedMessageId.set('');this.reactionMessageId.set('');this.replyTarget.set(null);this.details.set(null);this.pinsOpen.set(false);this.membersOpen.set(false);this.retry=null;this.generation++;this.disconnect?.();this.disconnect=null;this.selected.set(null);this.editing.set(null);this.draft='';this.error.set('');this.loadError.set(null);this.connected.set(true);}
  protected edit(message:ChatMessageDto):void{if(!message.mine||message.deletedAtIso)return;this.editing.set(message);this.replyTarget.set(null);this.draft=message.text;this.selectedMessageId.set('');this.focusComposer();}
  protected cancelEdit():void{this.editing.set(null);this.draft='';}
  protected async send():Promise<void>{

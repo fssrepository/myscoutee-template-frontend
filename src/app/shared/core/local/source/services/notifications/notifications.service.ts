@@ -65,23 +65,24 @@ export class LocalNotificationsService extends LocalRouteDelayService implements
     notificationId: string,
     signal?: AbortSignal
   ): Promise<NotificationReadResponseDto> {
-    const normalizedUserId = userId.trim();
-    const normalizedNotificationId = notificationId.trim();
-    if (!normalizedUserId || !normalizedNotificationId) {
-      throw new Error('Notification could not be marked as read.');
-    }
-    await this.repository.whenReady();
-    await this.waitForRouteDelay(LocalNotificationsService.ROUTE, signal);
-    const notification = this.repository.markRead(normalizedUserId, normalizedNotificationId);
-    if (!notification) {
-      throw new Error('Notification was not found.');
-    }
-    const unreadCount = this.repository.unreadCount(normalizedUserId);
-    await this.repository.flushToIndexedDb();
-    return {
-      notification: LocalNotificationMapper.toDto(notification),
-      unreadCount
-    };
+    return this.withRouteDelay(LocalNotificationsService.ROUTE, async (): Promise<NotificationReadResponseDto> => {
+      const normalizedUserId = userId.trim();
+      const normalizedNotificationId = notificationId.trim();
+      if (!normalizedUserId || !normalizedNotificationId) {
+        throw new Error('Notification could not be marked as read.');
+      }
+      await this.repository.whenReady();
+      const notification = this.repository.markRead(normalizedUserId, normalizedNotificationId);
+      if (!notification) {
+        throw new Error('Notification was not found.');
+      }
+      const unreadCount = this.repository.unreadCount(normalizedUserId);
+      await this.repository.flushToIndexedDb();
+      return {
+        notification: LocalNotificationMapper.toDto(notification),
+        unreadCount
+      };
+    }, signal);
   }
 
   async sync(
@@ -123,14 +124,15 @@ export class LocalNotificationsService extends LocalRouteDelayService implements
     request: NotificationPreferencesRequestDto,
     signal?: AbortSignal
   ): Promise<NotificationPreferencesResponseDto> {
-    const normalizedUserId = userId.trim();
-    if (!normalizedUserId) {
-      throw new Error('Notification preferences could not be updated.');
-    }
-    await this.repository.whenReady();
-    await this.waitForRouteDelay(LocalNotificationsService.ROUTE, signal);
-    const muted = this.repository.setMuted(normalizedUserId, request.muted === true);
-    await this.repository.flushToIndexedDb();
-    return { muted };
+    return this.withRouteDelay(LocalNotificationsService.ROUTE, async (): Promise<NotificationPreferencesResponseDto> => {
+      const normalizedUserId = userId.trim();
+      if (!normalizedUserId) {
+        throw new Error('Notification preferences could not be updated.');
+      }
+      await this.repository.whenReady();
+      const muted = this.repository.setMuted(normalizedUserId, request.muted === true);
+      await this.repository.flushToIndexedDb();
+      return { muted };
+    }, signal);
   }
 }

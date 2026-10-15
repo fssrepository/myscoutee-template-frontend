@@ -38,6 +38,21 @@ The existing scripts build the `components` submodule before the application.
 Local and HTTP adapters share the same contracts; see the
 [core domain map](src/app/shared/core/README.md).
 
+Shared component changes are committed once in the components repository and
+published to its `origin`. Fetch that remote and check out the same published
+commit here; never cherry-pick or recreate a component commit:
+
+```sh
+git -C components fetch origin
+git -C components checkout --detach <published-components-commit>
+git add components
+```
+
+Verify the commit belongs to `origin/master`, preserve dirty component work,
+and commit the frontend gitlink. The versioned submodule update mode is
+`checkout`: initialization restores the recorded commit without merging
+component histories. A frontend gitlink commit only records that dependency.
+
 ## GitHub Pages
 
 Run `npm run build:github` and commit the generated `docs/` directory.

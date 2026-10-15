@@ -47,7 +47,19 @@ export class ShowcaseComponent {
         const date = new Date(item.dateIso);
         return Number.isNaN(date.getTime()) ? null : { start: date, end: date };
       },
-      badgeLabel: item => item.title
+      badgeLabel: item => item.title,
+      // Opt in when the loader provides complete cell data or server aggregates:
+      // density: {monthMaxBadges: 5, weekMaxBadgesPerHour: 1},
+      badgeColors: {
+        counterKey: 'blue',
+        palette: {
+          blue: { badgeTone: 'stage-scheduled' },
+          violet: { badgeTone: 'purple' },
+          orange: { badgeTone: 'orange' },
+          green: { badgeTone: 'stage-finalized' }
+        },
+        resolveKey: item => item.palette
+      }
     },
     showGroupMarker: ({ groupIndex, scrollable }) => groupIndex > 0 || scrollable,
     trackBy: (_index, item) => item.id,

@@ -73,22 +73,24 @@ export class LocalIntegrationService extends LocalRouteDelayService {
     name: string,
     expiresInDays: number, admin = false
   ): Promise<IntegrationTokenCreatedDto> {
-    await this.repository.whenReady();
-    await this.waitForRouteDelay(`${INTEGRATIONS_ROUTE}/tokens`);
-    const created = this.repository.createToken(
-      this.requireUserId(admin),
-      name,
-      expiresInDays, admin
-    );
-    await this.repository.flushToIndexedDb();
-    return created;
+    return this.withRouteDelay(`${INTEGRATIONS_ROUTE}/tokens`, async (): Promise<IntegrationTokenCreatedDto> => {
+      await this.repository.whenReady();
+      const created = this.repository.createToken(
+        this.requireUserId(admin),
+        name,
+        expiresInDays, admin
+      );
+      await this.repository.flushToIndexedDb();
+      return created;
+    });
   }
 
   async revokeToken(tokenId: string, admin = false): Promise<void> {
-    await this.repository.whenReady();
-    await this.waitForRouteDelay(`${INTEGRATIONS_ROUTE}/tokens`);
-    this.repository.revokeToken(this.requireUserId(admin), tokenId, admin);
-    await this.repository.flushToIndexedDb();
+    return this.withRouteDelay(`${INTEGRATIONS_ROUTE}/tokens`, async (): Promise<void> => {
+      await this.repository.whenReady();
+      this.repository.revokeToken(this.requireUserId(admin), tokenId, admin);
+      await this.repository.flushToIndexedDb();
+    });
   }
 
   private requireUserId(admin = false): string {

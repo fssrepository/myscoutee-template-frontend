@@ -9,7 +9,7 @@
 @if(selected();as chat){
  <app-popup class="event-chat-popup-shell" [model]="chatPopupModel()" [zIndex]="2360" [attr.data-chat-id]="chat.id">
   <div class="chat-popup-wrap" data-guide-surface="chat"><div class="chat-popup-box">
-   <app-smart-list #thread data-guide-field="chat-list" [config]="threadConfig" [loadPage]="loadMessages" [filters]="threadFilters()" [itemTemplate]="messageTemplate" (viewportItemsChange)="visibleMessages($event)" (menuItemSelect)="onMenu($event)" />
+   <app-smart-list #thread data-guide-field="chat-list" [config]="threadConfig" [emptyError]="loadError()" [loadPage]="loadMessages" [filters]="threadFilters()" [itemTemplate]="messageTemplate" (viewportItemsChange)="visibleMessages($event)" (menuItemSelect)="onMenu($event)" />
    @if(typing().length){<div class="chat-typing-indicator" role="status">
     <span class="chat-typing-indicator-users">@for(person of typing();track person.userId){<span data-i18n-ignore>{{person.userName||person.userInitials}}</span>} {{'is typing'|i18n}}</span>
     <span class="chat-typing-indicator-dots" aria-hidden="true"><span></span><span></span><span></span></span>
