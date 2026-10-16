@@ -61,7 +61,6 @@ export class ShowcaseComponent {
         resolveKey: item => item.palette
       }
     },
-    showGroupMarker: ({ groupIndex, scrollable }) => groupIndex > 0 || scrollable,
     trackBy: (_index, item) => item.id,
     emptyLabel: 'showcase.empty', emptyDescription: 'showcase.empty.description', emptyStickyLabel: 'No items'
   };
