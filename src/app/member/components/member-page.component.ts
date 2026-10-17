@@ -196,8 +196,7 @@ export class MemberPageComponent implements OnDestroy {
     untracked(() => this.profile.clearPrivacyConsentRequirement());
     return;
    }
-   const userId = session.kind === 'demo' ? session.userId : session.profile.id;
-   if (user?.id !== userId || this.activeUserLoadState().status !== 'success') return;
+   if (!user || !this.privacyConsentAccountId()) return;
    if (!revision) { untracked(() => { void this.privacy.prepareOpen(); }); return; }
    const key = `${user.id}::${revision.id}:v${revision.version}`;
    if (this.privacyConsentCheckKey === key) return;
@@ -251,6 +250,11 @@ export class MemberPageComponent implements OnDestroy {
   } catch {
    // UsersService owns the avatar's error state, as in the native side menu.
   }
+ }
+ private privacyConsentAccountId(): string {
+  if (this.activeUserLoadState().status !== 'success') return '';
+  const user = this.users.peekCurrentUser();
+  return user?.id === this.profiles.activeUserProfile()?.id ? user?.id?.trim() ?? '' : '';
  }
  private async ensureActivePrivacyConsent(userId: string, revision: GuideRevision, checkKey: string): Promise<void> {
   const requestToken = ++this.privacyConsentCheckToken;

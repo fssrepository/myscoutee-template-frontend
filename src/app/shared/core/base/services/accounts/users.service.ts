@@ -29,7 +29,7 @@ export class UsersService extends BaseRouteModeService {
   const normalizedUserId = userId.trim();
   if (!normalizedUserId) return null;
   return this.profiles.getUserProfile(normalizedUserId)
-   ?? (this.localModeEnabled ? this.local.peekCachedUserById(normalizedUserId) : null);
+   ?? (this.localModeEnabled ? this.local.peekCachedUserById(normalizedUserId) : this.http.peekCachedUserById(normalizedUserId));
  }
  private readonly runtime = inject(AppRuntimeStore);
  async prepareDemoUserSession(userId: string, onProgress?: (state: BootstrapProcessState) => void): Promise<void> {

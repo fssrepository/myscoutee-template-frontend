@@ -83,6 +83,19 @@ describe('shared local workspace entry sequence', () => {
 });
 
 describe('destination account consent follows the native side menu', () => {
+ it('uses the hydrated server profile rather than a different Firebase UID for consent', () => {
+  const user = { id: 'server-profile-id' };
+  const value = Object.assign(Object.create(MemberPageComponent.prototype), {
+   users: { peekCurrentUser: () => user }, profiles: { activeUserProfile: () => user },
+   activeUserLoadState: () => ({ status: 'success' })
+  });
+  expect(value.privacyConsentAccountId()).toBe('server-profile-id');
+  value.activeUserLoadState = () => ({ status: 'loading' });
+  expect(value.privacyConsentAccountId()).toBe('');
+  value.activeUserLoadState = () => ({ status: 'success' });
+  value.users.peekCurrentUser = () => null;
+  expect(value.privacyConsentAccountId()).toBe('');
+ });
  const revision = { id: 'privacy', version: 2 };
  const key = 'member::privacy:v2';
  function member(consent: unknown) {

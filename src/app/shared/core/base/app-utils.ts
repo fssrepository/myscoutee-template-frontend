@@ -1,3 +1,4 @@
+
 export interface AsciiEmojiConversion {
   token: string;
   emoji: string;
@@ -65,7 +66,6 @@ const ASCII_EMOJI_TOKEN_REGEX = new RegExp(
   'g'
 );
 
-
 export class AppUtils {
 static initialsFromText(value: string): string {
     const words = value
@@ -105,6 +105,7 @@ static convertAsciiEmojis(value: string | null | undefined): string {
       return conversion ? `${prefix}${conversion.emoji}` : `${prefix}${token}`;
     });
   }
+
 
   static mediaImageVariantUrl(
     imageUrl: string | null | undefined,

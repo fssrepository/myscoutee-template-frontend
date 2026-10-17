@@ -6,6 +6,8 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import type { UserService, UserDto, UserSelectorRole, UserSelectorListItemDto, UserByIdQueryResponse, LocationCoordinates, UserLocationEligibilityResponseDto } from '../../../contracts/accounts/user.interface';
 import { environment } from '../../../../../../environments/environment';
 import { RouteDelayService } from '../../../base/services/platform/route-delay.service';
+import { SessionService } from '../../../base/services/accounts/session.service';
+import { OfflineCacheService } from '../../../base/services/platform/offline-cache.service';
 @Injectable({ providedIn: 'root' })
 export class HttpUsersService implements UserService {
   private static readonly DEMO_USERS_ROUTE = '/auth/demo-users';
@@ -15,6 +17,8 @@ export class HttpUsersService implements UserService {
   private readonly http = inject(HttpClient);
 
   private readonly routeDelay = inject(RouteDelayService);
+  private readonly session = inject(SessionService);
+  private readonly offlineCache = inject(OfflineCacheService);
 
   private readonly apiBaseUrl = environment.apiBaseUrl ?? '/api';
 
@@ -104,13 +108,31 @@ export class HttpUsersService implements UserService {
       deletedAtIso: typeof user.deletedAtIso === 'string' ? user.deletedAtIso : null
     };
   }
- async queryUserById(userId?: string, requestTimeoutMs?: number): Promise<UserByIdQueryResponse> {
-  const normalizedUserId = userId?.trim() ?? '';
-  const user = await this.routeDelay.withRequestTimeout(HttpUsersService.USER_BY_ID_ROUTE, this.http.get<UserDto | null>(
-   this.apiBaseUrl + HttpUsersService.USER_BY_ID_ROUTE, { params: normalizedUserId ? { userId: normalizedUserId } : {} }
-  ).toPromise(), 'User details request timeout.', requestTimeoutMs);
-  return { user: user ?? null };
- }
+  peekCachedUserById(userId: string): UserDto | null {
+    return this.offlineCache.readUser(userId.trim())?.user ?? null;
+  }
+
+  async queryUserById(userId?: string, requestTimeoutMs?: number): Promise<UserByIdQueryResponse> {
+    const normalizedUserId = userId?.trim() ?? '';
+    const session = this.session.currentSession();
+    const cacheUserId = session?.kind === 'firebase' ? session.profile.id : '';
+    try {
+      const user = await this.routeDelay.withRequestTimeout(HttpUsersService.USER_BY_ID_ROUTE, this.http.get<UserDto | null>(
+        this.apiBaseUrl + HttpUsersService.USER_BY_ID_ROUTE, { params: normalizedUserId ? { userId: normalizedUserId } : {} }
+      ).toPromise(), 'User details request timeout.', requestTimeoutMs);
+      const response = { user: user ?? null };
+      if (cacheUserId && user) this.offlineCache.writeUser(cacheUserId, response);
+      return response;
+    } catch (error) {
+      const status = (error as { status?: number } | null)?.status;
+      if (cacheUserId && ([0, 502, 503, 504].includes(status ?? -1)
+        || this.isTimeoutError(error, 'User details request timeout.'))) {
+        const cached = this.offlineCache.readUser(normalizedUserId || cacheUserId);
+        if (cached) return cached;
+      }
+      throw error;
+    }
+  }
 
   private static readonly USER_DELETE_ROUTE = '/auth/me/delete';
   async queryUserRealtimeLongPoll(userId: string, cursor: string | null = null, signal?: AbortSignal): Promise<UserRealtimeLongPollResponseDto | null> {
