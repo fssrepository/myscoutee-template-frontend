@@ -45,7 +45,8 @@ export class ShowcaseComponent {
       weekStartHour: 0, weekEndHour: 23, anchorRadius: 2,
       resolveDateRange: item => {
         const date = new Date(item.dateIso);
-        return Number.isNaN(date.getTime()) ? null : { start: date, end: date };
+        const end = new Date(item.endDateIso);
+        return Number.isNaN(date.getTime()) || Number.isNaN(end.getTime()) ? null : { start: date, end };
       },
       badgeLabel: item => item.title,
       // Opt in when the loader provides complete cell data or server aggregates:

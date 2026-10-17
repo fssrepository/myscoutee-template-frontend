@@ -13,6 +13,34 @@ function entry(localMode: boolean, pendingEntry: 'operator' | 'login' | 'explore
 }
 
 describe('Entry operator access parity', () => {
+  it.each([true, false])('keeps the OAuth destination after operator selection (local=%s)', async localMode => {
+    const redirect = '/mcp/authorize?client_id=client&state=return%20%26%20role';
+    const session = { kind: 'demo', userId: 'operator' };
+    const user = { id: 'operator', operator: true, profileStatus: 'public' };
+    const component = Object.assign(entry(localMode, 'explore'), {
+      session: {
+        currentSession: () => session,
+        startDemoSession: vi.fn(() => session),
+        startTrackedDemoSession: vi.fn().mockResolvedValue(session)
+      },
+      users: {
+        peekCachedUserById: vi.fn(() => user),
+        loadUserById: vi.fn().mockResolvedValue(user)
+      },
+      privacy: {
+        activeRevision: () => ({ id: 'privacy', version: 1 }),
+        loadConsent: vi.fn().mockResolvedValue({ revisionId: 'privacy', revisionVersion: 1 })
+      },
+      route: { snapshot: { queryParamMap: new Map([['redirect', redirect]]) } },
+      router: { navigateByUrl: vi.fn().mockResolvedValue(true) },
+      error: signal('')
+    });
+    await component.continueEntry();
+    const request = component.selector.openDemoBootstrapSelector.mock.calls[0][0];
+    expect(await request.onSelect('operator', 'operator')).toBe(true);
+    expect(component.privacy.loadConsent).toHaveBeenCalledWith('operator', 'privacy', 1);
+    expect(component.router.navigateByUrl).toHaveBeenCalledExactlyOnceWith(redirect);
+  });
   it('opens installed operator authentication before Firebase is configured', async () => {
     const component = entry(false, 'operator');
     await component.continueEntry();

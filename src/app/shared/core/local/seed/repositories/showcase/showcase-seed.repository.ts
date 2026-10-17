@@ -6,11 +6,12 @@ export class SeedShowcaseRepository {
   private readonly db = inject(LocalMemoryDb);
   seedDefaults(): void {
     const table = this.db.read().sampleCards;
-    const missing = cards.filter(card => Object.entries(card).some(([key, value]) =>
-      table.byId[card.id]?.[key as keyof typeof card] !== value));
+    const missing = cards.filter(card => !table.byId[card.id] || Object.keys(card).some(key =>
+      !(key in table.byId[card.id])));
     if (!missing.length) return;
     this.db.write(state => ({ ...state, sampleCards: {
-      byId: { ...state.sampleCards.byId, ...Object.fromEntries(missing.map(card => [card.id, structuredClone(card)])) },
+      byId: { ...state.sampleCards.byId, ...Object.fromEntries(missing.map(card =>
+        [card.id, { ...structuredClone(card), ...state.sampleCards.byId[card.id] }])) },
       ids: [...new Set([...state.sampleCards.ids, ...missing.map(card => card.id)])]
     } }));
   }

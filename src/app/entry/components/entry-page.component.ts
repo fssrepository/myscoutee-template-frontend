@@ -191,13 +191,10 @@ export class EntryPageComponent implements OnInit, OnDestroy {
     this.selector.openDemoBootstrapSelector({
       mode: mode === 'operator' ? 'operator' : 'member',
       selectableModes: mode === 'operator' ? ['operator'] : ['member', 'admin', 'operator'],
-      onSelect: async (userId, selectedMode) => {
+      onSelect: async (userId) => {
         const session = this.localMode ? this.session.startDemoSession(userId) : await this.session.startTrackedDemoSession(userId);
         if (!session) return this.i18n.translate(this.session.firebaseNotice() || 'Unable to open selected demo user.');
         try {
-          // Native operator selection enters through the protected operator
-          // route; its guard verifies the role and the destination hydrates.
-          if (selectedMode === 'operator') return await this.router.navigateByUrl('/operator');
           return await this.finishEntry();
         }
         catch { this.error.set('Unable to open selected user.'); return false; }

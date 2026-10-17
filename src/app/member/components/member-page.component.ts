@@ -12,7 +12,7 @@ import { AppSetupPopupComponent } from '../../shared/ui/components/app-setup-pop
 import { ChatComponent } from './chat/chat.component';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ShowcaseComponent, SHOWCASE_VIEW_OPTIONS } from './showcase/showcase.component';
-import { Component, computed, effect, inject, signal, untracked, OnDestroy } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked, OnDestroy, HostListener } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AppMenuComponent, HeaderCardComponent, IndicatorComponent, I18nPipe, DialogStore, ExplanationGuideService, FloatingLauncherComponent, PopupComponent, UiTaskScheduler, UiPollCoordinator, PopupPresenceStore, type AppMenuTrigger, type AppMenuItem, type HeaderCardModel, type AppMenuModel, type PopupModel } from '@fssrepository/myscoutee-components';
 import { NotificationCenterStore } from '../../shared/ui/context/stores/notification/notification-center.store';
@@ -36,6 +36,10 @@ import { NgComponentOutlet } from '@angular/common';
  templateUrl: './member-page.component.html', styleUrl: './member-page.component.scss'
 })
 export class MemberPageComponent implements OnDestroy {
+ @HostListener('window:online')
+ protected onWindowOnline(): void { this.runtime.setOnlineState(true); }
+ @HostListener('window:offline')
+ protected onWindowOffline(): void { this.runtime.setOnlineState(false); }
  protected readonly deployment=inject(DeploymentConfigurationService);
  private readonly route = inject(ActivatedRoute);
  protected readonly role = this.route.snapshot.data['role'];

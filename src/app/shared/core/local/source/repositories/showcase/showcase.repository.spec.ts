@@ -35,4 +35,18 @@ describe('template sample-card persistence', () => {
     expect((await repository.queryPage(0,2)).items[0].title).toBe('Coastal light');
     expect((await repository.queryPage(2,2)).items).toEqual([]);
   });
+  it('fills a missing seeded end time without replacing saved fields and keeps the same result on reentry', async () => {
+    const seed = TestBed.inject(SeedShowcaseRepository);
+    seed.seedDefaults();
+    const id = state.sampleCards.ids[0];
+    state.sampleCards.byId[id].title = 'My saved card';
+    delete (state.sampleCards.byId[id] as Partial<typeof state.sampleCards.byId[string]>).endDateIso;
+    seed.seedDefaults();
+    const repository = TestBed.inject(LocalShowcaseRepository);
+    const first = await repository.queryPage(0, 4);
+    expect(first.items[0].title).toBe('My saved card');
+    expect(first.items.every(card => Date.parse(card.endDateIso) > Date.parse(card.dateIso))).toBe(true);
+    seed.seedDefaults();
+    expect(await repository.queryPage(0, 4)).toEqual(first);
+  });
 });

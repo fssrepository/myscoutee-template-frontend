@@ -1,6 +1,6 @@
 {
   "lang": "en",
-  "version": "2026.10.16.2",
+  "version": "2026.10.17.2",
   "messages": {
     "clipboard.paste.permission.help": "Allow clipboard access in site settings, then retry.",
     "accommodation": "Accommodation",
@@ -1458,6 +1458,14 @@
     "operator.email.saved": "Email configuration saved.",
     "operator.email.invalid": "Check the provider, sender email and API key.",
     "operator.email.changed": "Email configuration changed. Reload and retry.",
+    "admin.jobs.rule.account.purge": "Finalize deleted accounts",
+    "admin.jobs.rule.account.purge.description": "Permanently removes account activity and private media after the deletion grace period.",
+    "admin.jobs.rule.integration-webhooks": "Integration callbacks",
+    "admin.jobs.rule.integration-webhooks.description": "Runs only for the selected base group.",
+    "admin.jobs.rule.notification.outbox": "Send notifications",
+    "admin.jobs.rule.notification.outbox.description": "Sends queued in-app and push notifications.",
+    "admin.jobs.rule.media.deletion": "Delete queued media",
+    "admin.jobs.rule.media.deletion.description": "Deletes queued media files from storage and retries failed deletions.",
     "admin.jobs.rule.account.deletion.warning": "Account deletion warning",
     "admin.jobs.rule.account.deletion.warning.description": "Emails deleted-account owners five days before permanent deletion using the operator’s email provider.",
     "account.deletion.warning.subject": "Your account is approaching permanent deletion",

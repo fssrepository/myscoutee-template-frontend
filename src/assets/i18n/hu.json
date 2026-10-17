@@ -1,6 +1,6 @@
 {
   "lang": "hu",
-  "version": "2026.10.16.2",
+  "version": "2026.10.17.2",
   "messages": {
     "clipboard.paste.permission.help": "Engedélyezd a vágólapot a webhelybeállításokban, majd próbáld újra.",
     "accommodation": "Szállás",
@@ -1458,6 +1458,14 @@
     "operator.email.saved": "Email-beállítások mentve.",
     "operator.email.invalid": "Ellenőrizd a szolgáltatót, a feladói emailt és az API-kulcsot.",
     "operator.email.changed": "Az email-beállítás módosult. Töltsd újra és próbáld ismét.",
+    "admin.jobs.rule.account.purge": "Törölt fiókok véglegesítése",
+    "admin.jobs.rule.account.purge.description": "A törlési türelmi idő után végleg eltávolítja a fiók aktivitását és privát médiáját.",
+    "admin.jobs.rule.integration-webhooks": "Integrációs visszahívások",
+    "admin.jobs.rule.integration-webhooks.description": "Csak a kiválasztott alapcsoporthoz tartozó adatokat dolgozza fel.",
+    "admin.jobs.rule.notification.outbox": "Értesítések kiküldése",
+    "admin.jobs.rule.notification.outbox.description": "Kiküldi a sorban álló alkalmazáson belüli és push értesítéseket.",
+    "admin.jobs.rule.media.deletion": "Várakozó médiafájlok törlése",
+    "admin.jobs.rule.media.deletion.description": "Törli a várakozó médiafájlokat a tárhelyről, és újrapróbálja a sikertelen törléseket.",
     "admin.jobs.rule.account.deletion.warning": "Figyelmeztetés fióktörlés előtt",
     "admin.jobs.rule.account.deletion.warning.description": "Az operator email-szolgáltatóján keresztül értesíti a törölt fiókok tulajdonosait öt nappal a végleges törlés előtt.",
     "account.deletion.warning.subject": "Közeleg a fiókod végleges törlése",

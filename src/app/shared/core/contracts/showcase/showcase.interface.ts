@@ -5,4 +5,5 @@ export interface SampleCardDto {
   imageUrl: string;
   palette: string;
   dateIso: string;
+  endDateIso: string;
 }
