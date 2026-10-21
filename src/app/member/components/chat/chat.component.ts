@@ -21,19 +21,19 @@ export class ChatComponent implements OnDestroy {
  private readonly runtime = inject(AppRuntimeStore);
  private readonly dialogs = inject(DialogStore);
  protected readonly membersOpen = signal(false);
- protected readonly listPopupModel: PopupModel = { title: 'Chats', size: 'wide', height: 'full', bodyLayout: 'fill', headerTone: 'accent', onClose: () => this.closed.emit() };
+ protected readonly listPopupModel: PopupModel = { title: "chats", size: 'wide', height: 'full', bodyLayout: 'fill', headerTone: 'accent', onClose: () => this.closed.emit() };
  protected readonly chatPopupModel = computed<PopupModel>(() => {
   const chat = this.selected();
   return { title: chat?.title ?? '', translateTitle: false, size: 'wide', height: 'full', bodyLayout: 'fill', headerTone: 'accent',
-   ariaLabel: chat?.title, closeAriaLabel: 'Close chat popup', backdropTone: 'dim',
+   ariaLabel: chat?.title, closeAriaLabel: "chat.popup.close.aria", backdropTone: 'dim',
    toolbarControls: [
     { id: 'chat-call', align: 'end', icon: this.calls.available() ? 'call' : 'phone_disabled',
       mirrorIcon: !this.calls.available(), palette: this.calls.available() ? 'green' : 'danger',
       ariaLabel: 'chat.call.open', disabled: !this.calls.available() || !this.calls.supported() },
     { kind: 'menu', id: 'chat-header-actions', align: 'end', menuKind: 'inline', items: [
-      { id: 'chat-header-members', layout: 'image-stack', palette: 'blue', ariaLabel: 'Members',
+      { id: 'chat-header-members', layout: 'image-stack', palette: 'blue', ariaLabel: "members",
         imageStack: (chat?.members ?? []).map(member => ({id: member.id, imageUrl: member.imageUrl, imageAlt: member.name ?? member.initials, imageFallback: member.initials})), imageStackMaxVisible: 4 },
-      { id: 'chat-header-pins', icon: 'push_pin', palette: 'default', ariaLabel: 'Open pinned messages' }
+      { id: 'chat-header-pins', icon: 'push_pin', palette: 'default', ariaLabel: "chat.pins.open.aria" }
     ] }
    ], onClose: () => this.close(),
    onAction: event => { if (event.action.id === 'chat-call') this.calls.show(); },
@@ -41,7 +41,7 @@ export class ChatComponent implements OnDestroy {
     else if (event.itemSelect.id === 'chat-header-members') this.membersOpen.set(true); }
   };
  });
- protected readonly membersModel: PopupModel = { title: 'Members', size: 'small', height: 'auto', headerTone: 'accent', closeOnBackdrop: true, onClose: () => this.membersOpen.set(false) };
+ protected readonly membersModel: PopupModel = { title: "members", size: 'small', height: 'auto', headerTone: 'accent', closeOnBackdrop: true, onClose: () => this.membersOpen.set(false) };
  protected readonly membersConfig: SmartListConfig<NonNullable<ChatDTO['members']>[number]> = { pageSize: 20, showStickyHeader: false, listLayout: 'stack', headerProgress: {enabled: false}, trackBy: (_i,member) => member.id };
  protected readonly loadMembers: SmartListLoadPage<NonNullable<ChatDTO['members']>[number]> = query => {
   const members = this.selected()?.members ?? [];
@@ -65,14 +65,14 @@ export class ChatComponent implements OnDestroy {
  private localTyping=false;
  private readonly remoteTypingTimers=new Map<string,ReturnType<typeof setTimeout>>();
  private retry:{text:string;replyId:string;clientId:string}|null=null;
- protected readonly actionTrigger:AppMenuTrigger={icon:'more_vert',closeIcon:'close',hideLabel:true,layout:'icon',palette:'blue',ariaLabel:'More message actions'};
- protected readonly emojiTrigger:AppMenuTrigger={icon:'add',closeIcon:'close',hideLabel:true,layout:'icon',palette:'blue',ariaLabel:'Search emoji'};
+ protected readonly actionTrigger:AppMenuTrigger={icon:'more_vert',closeIcon:'close',hideLabel:true,layout:'icon',palette:'blue',ariaLabel:"chat.message.actions.aria"};
+ protected readonly emojiTrigger:AppMenuTrigger={icon:'add',closeIcon:'close',hideLabel:true,layout:'icon',palette:'blue',ariaLabel:"chat.emoji.search"};
  protected readonly emojiMenu:AppMenuModel<string,{emoji:string}>={layout:'tabs',density:'compact',groups:ChatMessageMenuConverter.emojiCategories.map(category=>({
   id:category.key,label:category.label,icon:category.icon,items:category.emojis.map(emoji=>({id:`emoji:${emoji}`,label:emoji,detail:category.label,icon:emoji,iconKind:'text',layout:'icon',value:emoji,context:{emoji}}))
  }))};
- protected readonly pinsModel:PopupModel={title:'Pinned messages',ariaLabel:'Pinned messages',closeAriaLabel:'Close pinned messages',size:'small',height:'auto',bodyLayout:'flush',headerTone:'accent',closeOnBackdrop:true,onClose:()=>this.pinsOpen.set(false)};
- protected readonly detailsModel:PopupModel={title:'Message reactions',ariaLabel:'Message reactions',closeAriaLabel:'Close reactions',size:'small',height:'auto',headerTone:'accent',bodyLayout:'flush',backdropTone:'dim',closeOnBackdrop:true,onClose:()=>this.details.set(null)};
- protected readonly pinsConfig:SmartListConfig<ChatMessageDto>={pageSize:20,showStickyHeader:false,listLayout:'stack',trackBy:(_i,message)=>message.id,emptyLabel:'No pinned messages',headerProgress:{enabled:false}};
+ protected readonly pinsModel:PopupModel={title:"chat.pins.title",ariaLabel:"chat.pins.title",closeAriaLabel:"chat.pins.close.aria",size:'small',height:'auto',bodyLayout:'flush',headerTone:'accent',closeOnBackdrop:true,onClose:()=>this.pinsOpen.set(false)};
+ protected readonly detailsModel:PopupModel={title:"chat.reactions.title",ariaLabel:"chat.reactions.title",closeAriaLabel:"chat.reactions.close.aria",size:'small',height:'auto',headerTone:'accent',bodyLayout:'flush',backdropTone:'dim',closeOnBackdrop:true,onClose:()=>this.details.set(null)};
+ protected readonly pinsConfig:SmartListConfig<ChatMessageDto>={pageSize:20,showStickyHeader:false,listLayout:'stack',trackBy:(_i,message)=>message.id,emptyLabel:'chat.pins.empty',headerProgress:{enabled:false}};
  protected readonly loadPins:SmartListLoadPage<ChatMessageDto>=query=>{
   const pins=(this.thread?.itemsSnapshot()??[]).filter(message=>message.pinnedAtIso&&!message.deletedAtIso).sort((a,b)=>Date.parse(b.pinnedAtIso!)-Date.parse(a.pinnedAtIso!));
   return of({items:pins.slice(query.page*query.pageSize,(query.page+1)*query.pageSize),total:pins.length});

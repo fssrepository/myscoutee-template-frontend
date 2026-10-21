@@ -31,21 +31,21 @@ export type BootstrapProcessListener<Stage extends string = BootstrapProcessStag
 ) => void;
 
 export const BOOTSTRAP_PROCESS_STEPS: readonly BootstrapProcessStep[] = [
-  { stage: 'selector', percent: 0, label: 'Preparing demo selector' },
-  { stage: 'chats', percent: 11, label: 'Loading chats' },
-  { stage: 'users', percent: 34, label: 'Preparing demo users' },
-  { stage: 'helpCenter', percent: 95, label: 'Preparing help content' },
-  { stage: 'adminUsers', percent: 97, label: 'Preparing admin users' },
-  { stage: 'operatorUsers', percent: 97, label: 'Preparing demo users' },
-  { stage: 'indexedDb', percent: 98, label: 'Syncing demo IndexedDB' },
-  { stage: 'ready', percent: 100, label: 'Demo data ready' }
+  { stage: 'selector', percent: 0, label: 'demo.selector.loading.title' },
+  { stage: 'chats', percent: 11, label: 'demo.seed.chats.loading' },
+  { stage: 'users', percent: 34, label: 'demo.seed.users.preparing' },
+  { stage: 'helpCenter', percent: 95, label: 'demo.seed.help.preparing' },
+  { stage: 'adminUsers', percent: 97, label: 'demo.seed.admin.users.preparing' },
+  { stage: 'operatorUsers', percent: 97, label: 'demo.seed.users.preparing' },
+  { stage: 'indexedDb', percent: 98, label: 'demo.seed.database.syncing' },
+  { stage: 'ready', percent: 100, label: 'demo.data.ready' }
 ];
 
 export const SESSION_PROCESS_STEPS: readonly BootstrapProcessStep[] = [
-  { stage: 'session', percent: 0, label: 'Preparing demo session' },
-  { stage: 'sessionChats', percent: 38, label: 'Preparing chat threads' },
-  { stage: 'sessionIndexedDb', percent: 84, label: 'Syncing demo IndexedDB' },
-  { stage: 'sessionReady', percent: 100, label: 'Demo session ready' }
+  { stage: 'session', percent: 0, label: 'demo.session.preparing' },
+  { stage: 'sessionChats', percent: 38, label: 'demo.seed.threads.preparing' },
+  { stage: 'sessionIndexedDb', percent: 84, label: 'demo.seed.database.syncing' },
+  { stage: 'sessionReady', percent: 100, label: 'demo.session.ready.title' }
 ];
 
 const PROCESS_STEP_BY_STAGE = new Map<BootstrapProcessStage, BootstrapProcessStep>(

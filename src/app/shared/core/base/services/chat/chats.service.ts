@@ -1,15 +1,17 @@
+import { HTTP_ADAPTER, LOCAL_ADAPTER } from '../../adapter-loaders';
+import { AdapterProxyService } from '../platform/adapter-proxy.service';
 import type { ChatCallRequest } from '../../../contracts/chat/chat-call.interface';
 import { Injectable, inject } from '@angular/core';
 import type { ListQuery } from '@fssrepository/myscoutee-components';
 import type { ChatDTO, ChatMessageDto, ChatMessageAttachment, ChatMessageMutation, ChatLiveEvent, ChatFeedFilters } from '../../../contracts';
-import { LocalChatsService } from '../../../local/source/services/chat/chats.service';
-import { HttpChatsService } from '../../../http/services/chat/chats.service';
 import { BaseRouteModeService } from '../platform/base-route-mode.service';
 import { RouteDelayService } from '../platform/route-delay.service';
 @Injectable({providedIn:'root'})
 export class ChatsService extends BaseRouteModeService {
- private readonly local=inject(LocalChatsService);
- private readonly http=inject(HttpChatsService);
+  private readonly transportAdapters = inject(AdapterProxyService);
+
+ private readonly local=this.transportAdapters.reference(LOCAL_ADAPTER.CHATS);
+ private readonly http=this.transportAdapters.reference(HTTP_ADAPTER.CHATS);
  private readonly routeDelay=inject(RouteDelayService);
  private get service(){return this.resolveRouteService('/activities/chats',this.local,this.http);}
  queryActivitiesChatPage(userId:string,query:ListQuery<ChatFeedFilters>,signal?:AbortSignal){return this.service.queryActivitiesChatPage(userId,query,signal);}

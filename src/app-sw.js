@@ -22,9 +22,7 @@ const PRECACHE_CORE_URLS = [
   './assets/icon/android-chrome-192x192.png',
   './assets/icon/android-chrome-512x512.png',
   './assets/logo/heart.png',
-  './assets/logo/heart.webp',
-  './assets/i18n/en.json',
-  './assets/i18n/hu.json'
+  './assets/logo/heart.webp'
 ];
 const PRECACHE_BUILD_URLS = [];
 const PRECACHE_URLS = [...PRECACHE_CORE_URLS, ...PRECACHE_BUILD_URLS];
@@ -42,7 +40,9 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(APP_CACHE)
       .then(cache => cache.addAll(
-        PRECACHE_URLS.map(url => new Request(url, { cache: 'reload' }))
+        PRECACHE_URLS.map(url => new Request(url, {
+          cache: /-[a-z0-9]{8}\.(?:js|css)$/i.test(url) ? 'default' : 'reload'
+        }))
       ))
       .catch(async error => {
         await caches.delete(APP_CACHE);
@@ -228,7 +228,7 @@ async function serveAppShell(request) {
 async function networkFirstStaticAsset(request) {
   // Angular content-hashed bundles are immutable, including lazy chunks.
   // Reuse the current/retained build cache before contacting the network.
-  if (/\/[\w.-]+-[A-Z0-9]{8}\.(?:js|css)$/.test(new URL(request.url).pathname)) {
+  if (/\/[\w.-]+-[A-Z0-9]{8}\.(?:js|css)$/i.test(new URL(request.url).pathname)) {
     const cached = await matchAppBundleCache(request);
     if (cached) {
       return cached;

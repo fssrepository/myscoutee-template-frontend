@@ -44,7 +44,8 @@
             ],
             "styles": [
               "src/_styles/styles.scss"
-            ]
+            ],
+            "statsJson": true
           },
           "configurations": {
             "production": {

@@ -20,18 +20,18 @@ export class HelpCenterContentBuilder {
       return kind === 'privacy'
         ? 'Folytatás előtt nézd át és fogadd el, hogyan használja az alkalmazás az adataidat.'
         : kind === 'terms'
-          ? APP_STATIC_DATA.defaultTermsCenterRevisionsByLang.hu.description
+          ? APP_STATIC_DATA.documentDescriptionsByLang.hu.terms
         : kind === 'explanation'
-          ? APP_STATIC_DATA.defaultExplanationHomeRevisionsByLang.hu.description
-          : APP_STATIC_DATA.defaultHelpCenterRevisionsByLang.hu.description;
+          ? APP_STATIC_DATA.documentDescriptionsByLang.hu.explanation
+          : APP_STATIC_DATA.documentDescriptionsByLang.hu.help;
     }
     return kind === 'privacy'
-      ? APP_STATIC_DATA.defaultPrivacyCenterDescription
+      ? APP_STATIC_DATA.documentDescriptionsByLang.en.privacy
       : kind === 'terms'
-        ? APP_STATIC_DATA.defaultTermsCenterDescription
+        ? APP_STATIC_DATA.documentDescriptionsByLang.en.terms
       : kind === 'explanation'
         ? ''
-        : APP_STATIC_DATA.defaultHelpCenterDescription;
+        : APP_STATIC_DATA.documentDescriptionsByLang.en.help;
   }
 
   static documentLabel(kind: HelpCenterDocumentKind): string {

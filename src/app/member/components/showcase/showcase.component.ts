@@ -9,9 +9,9 @@ import type { SampleCardDto } from '../../../shared/core/contracts/showcase/show
 
 // The retained Activity / Events views use the shared SmartList calendar.
 export const SHOWCASE_VIEW_OPTIONS = [
-  { id: 'month', label: 'Month', icon: 'calendar_month', palette: 'gold' as const },
-  { id: 'week', label: 'Week', icon: 'date_range', palette: 'green' as const },
-  { id: 'day', label: 'Day', icon: 'today', palette: 'blue' as const }
+  { id: 'month', label: "month", icon: 'calendar_month', palette: 'gold' as const },
+  { id: 'week', label: "week", icon: 'date_range', palette: 'green' as const },
+  { id: 'day', label: "day", icon: 'today', palette: 'blue' as const }
 ];
 @Component({
   selector: 'app-showcase', standalone: true,
@@ -34,9 +34,9 @@ export class ShowcaseComponent {
     headerProgress: { enabled: true, state: () => this.runtime.isDataSourceAvailable() ? 'active' : 'inactive' },
     pagination: { mode: 'scroll' },
     views: [
-      { key: 'day', label: 'Day', mode: 'list', pageSize: 10 },
-      { key: 'week', label: 'Week', mode: 'week', pageSize: 50 },
-      { key: 'month', label: 'Month', mode: 'month', pageSize: 50 }
+      { key: 'day', label: "day", mode: 'list', pageSize: 10 },
+      { key: 'week', label: "week", mode: 'week', pageSize: 50 },
+      { key: 'month', label: "month", mode: 'month', pageSize: 50 }
     ],
     cacheable: true,
     groupBy: item => UiDateUtils.smartListDayLabel(new Date(item.dateIso)),
@@ -63,7 +63,7 @@ export class ShowcaseComponent {
       }
     },
     trackBy: (_index, item) => item.id,
-    emptyLabel: 'showcase.empty', emptyDescription: 'showcase.empty.description', emptyStickyLabel: 'No items'
+    emptyLabel: 'showcase.empty', emptyDescription: 'showcase.empty.description', emptyStickyLabel: "no.items"
   };
   protected card(item: SampleCardDto): InfoCardData {
     return { id: item.id, title: item.title, description: item.description, imageUrl: item.imageUrl, i18nIgnoreContent: true, hasMenuOptions: false };

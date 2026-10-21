@@ -37,7 +37,7 @@ export class ProfileHeaderCardConverter {
       badgeStyle: this.completionBadgeStyle(user.completion),
       showEdit: options.showEdit === true,
       editDisabled: options.editDisabled === true,
-      editAriaLabel: options.editAriaLabel ?? 'Edit',
+      editAriaLabel: options.editAriaLabel ?? "edit",
       showRing: options.showRing === true,
       ringState: options.ringState ?? 'loading',
       ringTitle: options.ringTitle ?? null

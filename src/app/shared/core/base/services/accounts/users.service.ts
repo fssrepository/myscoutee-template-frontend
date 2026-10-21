@@ -1,11 +1,11 @@
+import { HTTP_ADAPTER, LOCAL_ADAPTER } from '../../adapter-loaders';
+import { AdapterProxyService } from '../platform/adapter-proxy.service';
 
 import type { BootstrapProcessState } from '../platform/bootstrap.service';
 import { Injectable, inject } from '@angular/core';
 import type { UserDto, UserSelectorRole, LocationCoordinates, UserLogoutRequestDto, UserSubmitActionResponseDto } from '../../../contracts/accounts/user.interface';
 import { BaseRouteModeService } from '../platform/base-route-mode.service';
 import { RouteDelayService } from '../platform/route-delay.service';
-import { LocalUsersService } from '../../../local/source/services/accounts/users.service';
-import { HttpUsersService } from '../../../http/services/accounts/users.service';
 import { UserProfileStore } from '../../../../ui/context/stores/profile/user-profile.store';
 import { AppRuntimeStore } from '../../../../ui/context/stores/app/app-runtime.store';
 export const USER_BY_ID_LOAD_CONTEXT_KEY = 'user-by-id';
@@ -13,8 +13,10 @@ export const USER_PROFILE_SAVE_CONTEXT_KEY = 'user-profile-save';
 export const USER_LOGOUT_CONTEXT_KEY = 'user-logout';
 @Injectable({ providedIn: 'root' })
 export class UsersService extends BaseRouteModeService {
- private readonly local = inject(LocalUsersService);
- private readonly http = inject(HttpUsersService);
+  private readonly transportAdapters = inject(AdapterProxyService);
+
+ private readonly local = this.transportAdapters.reference(LOCAL_ADAPTER.USERS);
+ private readonly http = this.transportAdapters.reference(HTTP_ADAPTER.USERS);
  private readonly profiles = inject(UserProfileStore);
  private readonly routeDelay = inject(RouteDelayService);
  realtimePollIntervalMs(): number { return this.routeDelay.resolveIntervalMs('/auth/me/realtime/long-poll', 30_000); }

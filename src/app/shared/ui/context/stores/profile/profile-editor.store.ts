@@ -21,7 +21,7 @@ export class ProfileEditorStore {
   readonly component = this.componentRef.asReadonly();
   readonly loadFailed = signal(false);
   readonly loadingModel: PopupModel = {
-    title: 'Profile', ariaLabel: 'Profile', size: 'wide', height: 'full', bodyLayout: 'fill',
+    title: "profile", ariaLabel: "profile", size: 'wide', height: 'full', bodyLayout: 'fill',
     onClose: () => this.close()
   };
   readonly draft = signal<ProfileDraft>({ name: '', images: [] });

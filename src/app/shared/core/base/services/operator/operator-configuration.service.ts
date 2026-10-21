@@ -1,13 +1,15 @@
+import { HTTP_ADAPTER, LOCAL_ADAPTER } from '../../adapter-loaders';
+import { AdapterProxyService } from '../platform/adapter-proxy.service';
 import type {OperatorTlsCertificateMode,OperatorTlsTestKind,OperatorTlsJobPhase,OperatorTlsConfigurationDto,OperatorTlsConfigurationUpdateDto,OperatorTlsTestRequestDto,OperatorTlsJobDto} from '../../../contracts/operator/operator.interface';
 import {Injectable,inject} from '@angular/core';
 import {BaseRouteModeService} from '../platform/base-route-mode.service';
-import {HttpOperatorConfigurationService} from '../../../http/services/operator/operator-configuration.service';
-import {LocalOperatorConfigurationService} from '../../../local/source/services/operator/operator-configuration.service';
 import type {OperatorConfigurationDto, OperatorConfigurationSaveRequestDto, OperatorConfigurationTestRequestDto, OperatorConfigurationTestResultDto} from '../../../contracts/operator/operator.interface';
 @Injectable({providedIn:'root'})
 export class OperatorConfigurationService extends BaseRouteModeService {
- private readonly httpService=inject(HttpOperatorConfigurationService);
- private readonly localService=inject(LocalOperatorConfigurationService);
+  private readonly transportAdapters = inject(AdapterProxyService);
+
+ private readonly httpService=this.transportAdapters.reference(HTTP_ADAPTER.OPERATOR_CONFIGURATION);
+ private readonly localService=this.transportAdapters.reference(LOCAL_ADAPTER.OPERATOR_CONFIGURATION);
  private get configurationService(){return this.resolveRouteService('/operator/configuration',this.localService,this.httpService);}
   loadConfiguration(): Promise<OperatorConfigurationDto> {
     return this.configurationService.loadConfiguration();

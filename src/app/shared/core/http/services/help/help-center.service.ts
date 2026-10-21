@@ -267,13 +267,13 @@ export class HttpHelpCenterService {
   private defaultDescription(kind: HelpCenterDocumentKind): string {
     switch (kind) {
       case 'privacy':
-        return APP_STATIC_DATA.defaultPrivacyCenterDescription;
+        return APP_STATIC_DATA.documentDescriptionsByLang.en.privacy;
       case 'terms':
-        return APP_STATIC_DATA.defaultTermsCenterDescription;
+        return APP_STATIC_DATA.documentDescriptionsByLang.en.terms;
       case 'explanation':
-        return APP_STATIC_DATA.defaultExplanationHomeRevision.description;
+        return APP_STATIC_DATA.documentDescriptionsByLang.en.explanation;
       default:
-        return APP_STATIC_DATA.defaultHelpCenterDescription;
+        return APP_STATIC_DATA.documentDescriptionsByLang.en.help;
     }
   }
 

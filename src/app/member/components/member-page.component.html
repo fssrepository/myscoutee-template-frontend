@@ -24,7 +24,7 @@
             [model]="{ nodes: [{ id: 'navigator-header-actions', items: headerActions() }] }"
             (itemSelect)="headerAction($event.id)" />
           <button type="button" class="user-menu-close-btn" data-guide-field="close"
-            [attr.aria-label]="'Close menu' | i18n" (click)="$event.stopPropagation(); menuOpen.set(false)">
+            [attr.aria-label]="'close.menu' | i18n" (click)="$event.stopPropagation(); menuOpen.set(false)">
             <mat-icon>close</mat-icon>
           </button>
         </div>

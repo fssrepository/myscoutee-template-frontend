@@ -1,5 +1,5 @@
 import { OfflineCacheService } from '../platform/offline-cache.service';
-import { endDemoFailoverSession } from '../../../common/demo-failover';
+import { endDemoFailoverSession, prewarmDemoFailover } from '../../../common/demo-failover';
 import { Injectable, Injector, computed, inject, signal } from '@angular/core';
 
 import { environment } from '../../../../../../environments/environment';
@@ -558,6 +558,7 @@ export class SessionService {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(SessionService.SESSION_STORAGE_KEY, JSON.stringify(session));
     }
+    if (session.kind === 'demo' && !session.supportContext) prewarmDemoFailover();
   }
 
   private reusableFirebaseSessionId(profile: FirebaseAuthProfileDto): string {

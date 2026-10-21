@@ -1,3 +1,5 @@
+import { HTTP_ADAPTER, LOCAL_ADAPTER, type AdapterInstance } from '../../adapter-loaders';
+import { AdapterProxyService } from '../platform/adapter-proxy.service';
 import {
   Injectable,
   computed,
@@ -6,13 +8,6 @@ import {
   inject,
   signal
 } from '@angular/core';
-
-import {
-  LocalHelpCenterService
-} from '../../../local/source/services/help/help-center.service';
-import {
-  HttpHelpCenterService
-} from '../../../http/services/help/help-center.service';
 import type { GuideDocumentKind as HelpCenterDocumentKind } from '@fssrepository/myscoutee-components';
 import type { HelpCenterStateDto, PrivacyConsentDto, PrivacyConsentSaveRequestDto } from '../../../contracts';
 import {
@@ -26,9 +21,11 @@ export const HELP_CENTER_LOAD_CONTEXT_KEY = 'help-center-load';
   providedIn: 'root'
 })
 export class HelpCenterService extends BaseRouteModeService {
+  private readonly transportAdapters = inject(AdapterProxyService);
+
   private readonly contentGroupId = () => null;
-  private readonly localHelpCenterService = inject(LocalHelpCenterService);
-  private readonly httpHelpCenterService = inject(HttpHelpCenterService);
+  private readonly localHelpCenterService = this.transportAdapters.reference(LOCAL_ADAPTER.HELP_CENTER);
+  private readonly httpHelpCenterService = this.transportAdapters.reference(HTTP_ADAPTER.HELP_CENTER);
   private readonly helpCenterStore = inject(HelpCenterStore);
   private readonly helpStateRef = signal<HelpCenterStateDto | null>(null);
   private readonly privacyStateRef = signal<HelpCenterStateDto | null>(null);
@@ -105,11 +102,11 @@ export class HelpCenterService extends BaseRouteModeService {
     return this.cloneState(state);
   }
 
-  private helpService(kind: HelpCenterDocumentKind): LocalHelpCenterService | HttpHelpCenterService {
+  private helpService(kind: HelpCenterDocumentKind): AdapterInstance<typeof LOCAL_ADAPTER.HELP_CENTER> | AdapterInstance<typeof HTTP_ADAPTER.HELP_CENTER> {
     return this.resolveRouteService(`/${kind}/active`, this.localHelpCenterService, this.httpHelpCenterService);
   }
 
-  private privacyConsentService(): LocalHelpCenterService | HttpHelpCenterService {
+  private privacyConsentService(): AdapterInstance<typeof LOCAL_ADAPTER.HELP_CENTER> | AdapterInstance<typeof HTTP_ADAPTER.HELP_CENTER> {
     return this.resolveRouteService('/privacy/consents', this.localHelpCenterService, this.httpHelpCenterService);
   }
 

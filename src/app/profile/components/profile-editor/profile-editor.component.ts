@@ -22,7 +22,7 @@ export class ProfileEditorComponent {
   protected readonly profiles = inject(UserProfileStore);
   private readonly i18n = inject(I18nService);
   protected readonly popup = computed<PopupModel>(() => ({
-    title: this.editor.onboarding() ? 'profile.setup' : this.profiles.activeUserIsOperator() ? 'Operator profile' : this.profiles.activeUserIsAdmin() ? 'Admin profile' : 'Profile', size: 'wide', height: 'full', bodyLayout: 'fill', errorMessage: this.editor.error(),
+    title: this.editor.onboarding() ? 'profile.setup' : this.profiles.activeUserIsOperator() ? 'Operator profile' : this.profiles.activeUserIsAdmin() ? "admin.profile" : "profile", size: 'wide', height: 'full', bodyLayout: 'fill', errorMessage: this.editor.error(),
     closeOnBackdrop: !this.editor.busy(), showClose: !this.editor.busy(), onClose: () => this.editor.close(),
     headerControls: [
       ...(!this.profiles.activeUserIsAdmin() && !this.profiles.activeUserIsOperator() ? [{
@@ -31,7 +31,7 @@ export class ProfileEditorComponent {
       }] : []),
       { id: 'profile-actions', kind: 'menu', menuKind: 'inline', panelAlign: 'end', items: [{
       id: 'profile-save', guideId: 'profile-save', icon: 'done', kind: 'action', palette: 'green',
-      ariaLabel: 'Save profile', disabled: !this.editor.valid() || this.editor.busy(),
+      ariaLabel: "save.profile", disabled: !this.editor.valid() || this.editor.busy(),
       progress: { state: this.editor.saving() ? 'loading' : this.editor.error() ? 'error' : null, shape: 'circle' }
     }] }],
     onMenuSelect: event => {
@@ -49,7 +49,7 @@ export class ProfileEditorComponent {
     const model = ProfileHeaderCardConverter.convert({ ...user, ...this.editor.draft() }, {
       admin: this.profiles.activeUserIsAdmin() || operator,
       headline: operator ? this.editor.draft().headline?.trim() || 'Operator workspace' : undefined,
-      showEdit: true, editDisabled: this.editor.busy(), editAriaLabel: 'Open image editor',
+      showEdit: true, editDisabled: this.editor.busy(), editAriaLabel: "open.image.editor",
       showRing: this.editor.saving(), ringState: 'loading'
     });
     return operator ? { ...model, badgeLabel: 'OPERATOR', metaIcon: 'settings_input_component' } : model;
@@ -57,7 +57,7 @@ export class ProfileEditorComponent {
   protected profileStatusMenuTrigger() {
     const status = this.editor.draft().profileStatus ?? 'public';
     return { label: status, icon: this.profileStatusIcon(status), palette: this.profileStatusPalette(status),
-      layout: 'pill' as const, ariaLabel: 'Open profile status selector' };
+      layout: 'pill' as const, ariaLabel: "profile.status.select.aria" };
   }
   private profileStatusMenuItems() {
     const currentStatus = this.editor.draft().profileStatus ?? 'public';
@@ -84,7 +84,7 @@ export class ProfileEditorComponent {
     }
   }
   protected readonly imagePopup: PopupModel = {
-    title: 'Images', ariaLabel: 'Images', closeAriaLabel: 'Close',
+    title: "image.carousel.images", ariaLabel: "image.carousel.images", closeAriaLabel: "close",
     size: 'wide', height: 'full', bodyLayout: 'fill',
     onClose: () => this.panel.set('profile')
   };
@@ -93,7 +93,7 @@ export class ProfileEditorComponent {
     steps: [{ id: 'basics', title: 'basics', subtitle: 'profile.editor.basics.description', icon: 'badge', controls:
       this.profiles.activeUserIsAdmin() || this.profiles.activeUserIsOperator() ? [
         { id: 'full-name', kind: 'text', label: 'name', bind: 'name', required: true, placeholder: 'name' },
-        { id: 'headline', kind: 'text', label: 'Headline', bind: 'headline', placeholder: 'Admin workspace' },
+        { id: 'headline', kind: 'text', label: "headline", bind: 'headline', placeholder: "admin.workspace" },
         { id: 'about', kind: 'textarea', label: 'about', bind: 'about', rows: 3, maxLength: 160 }
       ] : [
         { id: 'name', bind: 'name', kind: 'text', label: this.i18n.translate('profile.name'), required: true, maxLength: 80 }

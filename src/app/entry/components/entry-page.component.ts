@@ -70,13 +70,13 @@ export class EntryPageComponent implements OnInit, OnDestroy {
     return HelpCenterRevisionDocumentViewerConfigConverter.convert({
       revision: this.privacy.activeRevision(), open: this.consentOpen(), shell: 'popup',
       onClose: () => this.closeConsent(), closeOnBackdrop: false,
-      titleFallback: this.i18n.translate('Privacy first'), ariaLabel: this.i18n.translate('GDPR consent'),
-      loading: this.privacyLoading(), loadingLabel: this.i18n.translate('Loading privacy content'),
+      titleFallback: this.i18n.translate('privacy.document.title'), ariaLabel: this.i18n.translate('privacy.consent.aria'),
+      loading: this.privacyLoading(), loadingLabel: this.i18n.translate('privacy.document.loading'),
       sectionMode: 'privacy', versionLabel: this.privacy.activeVersionLabel(),
       selectedSectionIds: this.privacy.activeRevision() ? this.privacy.loadEntryOptionalApprovals(this.privacy.activeRevision()!) : [],
       actions: [
         { id: 'entry-privacy-reject', label: this.i18n.translate('cancel'), palette: 'slate', disabled: this.busy() },
-        { id: 'entry-privacy-accept', label: this.i18n.translate('Accept and continue'),
+        { id: 'entry-privacy-accept', label: this.i18n.translate('privacy.consent.accept'),
           icon: this.busy() ? 'hourglass_top' : null, palette: 'blue',
           disabled: this.busy() || !this.privacy.activeRevision(),
           progress: this.busy() ? { state: 'loading', shape: 'button' } : null }
@@ -92,7 +92,7 @@ export class EntryPageComponent implements OnInit, OnDestroy {
     if (this.session.currentSession() && !this.localMode) {
       this.busy.set(true);
       void content.then(() => this.finishEntry())
-        .catch(() => this.error.set('Unable to open selected user.'))
+        .catch(() => this.error.set('entry.user.open.error'))
         .finally(() => this.busy.set(false));
     } else {
       void content.catch(() => this.error.set('Privacy content is not available right now.'));
@@ -149,7 +149,7 @@ export class EntryPageComponent implements OnInit, OnDestroy {
     const session = await this.session.startAuthSession(request);
     if (!session) return;
     try { this.authOpen.set(false); await this.finishEntry(); }
-    catch { this.error.set('Unable to open selected user.'); }
+    catch { this.error.set('entry.user.open.error'); }
   }
 
   private async prepareContent(): Promise<void> {
@@ -193,11 +193,11 @@ export class EntryPageComponent implements OnInit, OnDestroy {
       selectableModes: mode === 'operator' ? ['operator'] : ['member', 'admin', 'operator'],
       onSelect: async (userId) => {
         const session = this.localMode ? this.session.startDemoSession(userId) : await this.session.startTrackedDemoSession(userId);
-        if (!session) return this.i18n.translate(this.session.firebaseNotice() || 'Unable to open selected demo user.');
+        if (!session) return this.i18n.translate(this.session.firebaseNotice() || 'demo.session.open.error');
         try {
           return await this.finishEntry();
         }
-        catch { this.error.set('Unable to open selected user.'); return false; }
+        catch { this.error.set('entry.user.open.error'); return false; }
       }
     });
   }
@@ -282,11 +282,11 @@ export class EntryPageComponent implements OnInit, OnDestroy {
     }
     return new Promise(resolve => {
       this.dialogs.open({
-        title: 'Reactivate account?',
+        title: 'reactivate.account.question',
         message: this.i18n.translateParams('account.reactivation.message', { productName: this.deployment.branding().productName }),
-        cancelLabel: 'Cancel', confirmLabel: 'Reactivate', busyConfirmLabel: 'Reactivating...',
+        cancelLabel: 'cancel', confirmLabel: 'Reactivate', busyConfirmLabel: 'Reactivating...',
         confirmTone: 'accent', allowBackdropClose: false, allowEscapeClose: false,
-        failureMessage: 'Unable to reactivate account.',
+        failureMessage: 'account.reactivate.error',
         onCancel: async () => { await this.cancelEntry(); resolve(null); },
         onConfirm: async () => {
           const previous = user.previousProfileStatus;

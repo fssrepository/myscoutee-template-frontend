@@ -1,3 +1,4 @@
+import { I18nService } from '../../shared/core/base/services/localization/i18n.service';
 import { AppRuntimeStore } from '../../shared/ui/context/stores/app/app-runtime.store';
 import { backendUnavailable } from '../../shared/core/common/backend-connectivity';
 import { OperatorPageComponent } from '../../operator/components/operator-page/operator-page.component';
@@ -36,6 +37,7 @@ import { NgComponentOutlet } from '@angular/common';
  templateUrl: './member-page.component.html', styleUrl: './member-page.component.scss'
 })
 export class MemberPageComponent implements OnDestroy {
+ private readonly i18n = inject(I18nService);
  @HostListener('window:online')
  protected onWindowOnline(): void { this.runtime.setOnlineState(true); }
  @HostListener('window:offline')
@@ -91,29 +93,29 @@ export class MemberPageComponent implements OnDestroy {
   ariaLabel: this.notificationLauncherAriaLabel() + (this.connectionOffline() ? ' — Offline' : '')
  }));
  protected readonly headerActions = computed<readonly AppMenuItem[]>(() => [
-  { id: 'notifications', label: 'Notifications',
+  { id: 'notifications', label: "notifications",
     disabled: this.notifications.permissionActionPending() || this.profiles.activeUserLocationMissing(),
     progress: { state: this.notifications.permissionBusy() ? 'loading' : null },
     icon: this.connectionOffline() ? 'cloud_off' : this.profiles.activeUserLocationMissing() || this.notifications.muted() ? 'notifications_off' : 'notifications',
     palette: this.connectionOffline() ? 'offline' : this.profiles.activeUserLocationMissing() || this.notifications.muted() ? 'slate' : this.notifications.unreadCount() > 0 ? 'violet' : 'neutral',
     counter: this.notifications.unreadCount() > 0 ? { value: this.notifications.unreadCount(), max: 99 } : null,
     counterTone: 'alert', ariaLabel: this.notificationLauncherAriaLabel() + (this.connectionOffline() ? ' — Offline' : '') },
-  { id: 'explanations', label: 'Explanations', icon: 'tips_and_updates', kind: 'toggle',
-    checked: this.guide.enabled(), ariaLabel: this.guide.enabled() ? 'Turn explanations off' : 'Turn explanations on' },
-  { id: 'settings', label: 'Settings', icon: 'settings', ariaLabel: 'Open settings menu', items: this.settings() }
+  { id: 'explanations', label: "explanations", icon: 'tips_and_updates', kind: 'toggle',
+    checked: this.guide.enabled(), ariaLabel: this.guide.enabled() ? "turn.explanations.off" : "turn.explanations.on" },
+  { id: 'settings', label: "settings", icon: 'settings', ariaLabel: "open.settings.menu", items: this.settings() }
  ]);
  protected readonly settings = computed<readonly AppMenuItem[]>(() => [
   ...(this.role === 'member' ? [{ id: 'app-setup', label: 'install.app', icon: 'install_desktop' }] : []),
-  { id: 'help', label: 'Help', icon: 'help_outline', ariaLabel: 'Open help' },
-  { id: 'privacy', label: 'Privacy', icon: 'policy' },
-  { id: 'terms', label: 'Terms', icon: 'rule' },
-  ...(this.role === 'member' ? [{ id: 'delete-account', label: 'Delete account', icon: 'delete_forever', palette: 'danger' as const }] : []),
+  { id: 'help', label: "help", icon: 'help_outline', ariaLabel: "open.help" },
+  { id: 'privacy', label: "privacy", icon: 'policy' },
+  { id: 'terms', label: "terms", icon: 'rule' },
+  ...(this.role === 'member' ? [{ id: 'delete-account', label: "delete.account", icon: 'delete_forever', palette: 'danger' as const }] : []),
   { id: 'logout', label: 'logout', icon: 'logout' }
  ]);
  protected readonly pages = computed<AppMenuModel>(() => ({
   layout: 'grid', nodes: [{ id: 'activities', items: [
    { id: 'showcase', icon: 'dashboard', label: 'showcase.title', palette: 'teal' },
-   { id: 'chat', icon: 'chat', label: 'chats', palette: 'blue', ariaLabel: 'Open chat',
+   { id: 'chat', icon: 'chat', label: 'chats', palette: 'blue', ariaLabel: "open.chat",
      counter: (this.profiles.activeUserProfile()?.activities.chats ?? 0) > 0
       ? { value: this.profiles.activeUserProfile()!.activities.chats!, max: 99 } : null }
   ] }]
@@ -126,8 +128,8 @@ export class MemberPageComponent implements OnDestroy {
   const loading = !bootstrap && (status === 'idle' || status === 'loading');
   const failed = !bootstrap && (status === 'error' || status === 'timeout');
   const canToggle = !!bootstrap || !!user && !loading && !failed;
-  const label = failed ? 'Profile failed to load' : loading ? 'Loading profile'
-   : this.menuOpen() ? 'Close user menu' : 'Open user menu';
+  const label = failed ? this.i18n.translate('game.profile.load.failed.title') : loading ? this.i18n.translate('loading.profile')
+   : this.menuOpen() ? this.i18n.translate('menu.user.close.aria') : this.i18n.translate('menu.user.open.aria');
   return [{ id: 'navigator-avatar', kind: 'action', layout: 'image',
    imageUrl: user?.images?.[0], imageFallback: user?.initials, imageAlt: user?.name,
    ariaLabel: label, icon: loading ? 'schedule' : failed ? 'person_off' : '',
@@ -141,7 +143,7 @@ export class MemberPageComponent implements OnDestroy {
   const operator = this.role === 'operator';
   const model = ProfileHeaderCardConverter.convert(user, {
    admin: this.role === 'admin' || operator,
-   headline: operator ? user.headline?.trim() || 'Operator workspace' : undefined,
+   headline: operator ? user.headline?.trim() || this.i18n.translate('operator.workspace.title') : undefined,
    showEdit: true, editAriaLabel: operator ? 'operator.profile.open' : 'profile.edit',
    showRing: this.editor.saving(), ringState: this.editor.error() ? 'error' : 'loading'
   });
@@ -280,8 +282,9 @@ export class MemberPageComponent implements OnDestroy {
  }
  private notificationLauncherAriaLabel(): string {
   const count = Math.max(0, Math.trunc(Number(this.notifications.unreadCount()) || 0));
-  if (count > 0) return `Open notifications, ${count} new${this.notifications.muted() ? ', alerts muted' : ''}`;
-  return this.notifications.muted() ? 'Open notifications, alerts muted' : 'Open notifications';
+  return count > 0
+   ? this.i18n.translateParams(this.notifications.muted() ? 'notifications.open.muted.count.aria' : 'notifications.open.count.aria', { count })
+   : this.i18n.translate(this.notifications.muted() ? 'notifications.open.muted.aria' : 'notifications.open.aria');
  }
  protected openNotifications(event?: Event): void {
   event?.preventDefault();
@@ -306,14 +309,14 @@ export class MemberPageComponent implements OnDestroy {
   if (id === 'logout') {
    this.dialogs.open({
     title: 'logout.question', message: this.profiles.activeUserProfile()?.name?.trim() || '',
-    cancelLabel: 'Cancel', confirmLabel: 'Logout', confirmTone: 'accent',
+    cancelLabel: "cancel", confirmLabel: "logout", confirmTone: 'accent',
     onConfirm: async () => {
      const userId = this.profiles.activeUserId();
      if (userId) {
       const result = await this.users.logoutUser(userId);
       if (!result.submitted) {
-       this.dialogs.openInfo(result.message ?? 'Unable to log out.', {
-        title: 'Logout', confirmLabel: 'OK', confirmTone: 'neutral'
+       this.dialogs.openInfo(result.message ?? 'account.logout.error', {
+        title: "logout", confirmLabel: 'ok', confirmTone: 'neutral'
        });
        return;
       }
@@ -325,12 +328,12 @@ export class MemberPageComponent implements OnDestroy {
   }
   if (id === 'delete-account') {
    this.dialogs.open({
-    title: 'Delete account?', message: this.profiles.activeUserProfile()?.name,
-    warningMessage: 'You can reactivate within 30 days. After that, the account is permanently purged.',
-    cancelLabel: 'Cancel', confirmLabel: 'Delete', confirmTone: 'danger',
+    title: "delete.account.question", message: this.profiles.activeUserProfile()?.name,
+    warningMessage: 'account.deletion.retention.warning',
+    cancelLabel: "cancel", confirmLabel: "delete", confirmTone: 'danger',
     onConfirm: async () => {
      try { await this.users.deleteUser(this.profiles.activeUserId()); }
-     catch { this.dialogs.openInfo('Unable to delete account.', { title: 'Delete account', confirmLabel: 'OK', confirmTone: 'danger' }); return; }
+     catch { this.dialogs.openInfo('account.delete.error', { title: "delete.account", confirmLabel: 'ok', confirmTone: 'danger' }); return; }
      await this.logout();
     }
    });
@@ -339,7 +342,7 @@ export class MemberPageComponent implements OnDestroy {
   if (id === 'privacy' || id === 'terms' || id === 'help') {
    this.menuOpen.set(false);
    this.profile.openSettingsPopup(id);
-   void this.help.preload(id).catch(() => this.dialogs.openInfo('document.load.failed', { title: 'Unable to load content' }));
+   void this.help.preload(id).catch(() => this.dialogs.openInfo('document.load.failed', { title: 'content.load.error.title' }));
   }
  }
  protected async logout(): Promise<void> {

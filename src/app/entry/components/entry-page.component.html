@@ -1,7 +1,7 @@
 <main class="landing" appLandingGuideSurface="landing.entry">
   <header class="entry-header">
     <a class="brand" href="./" [attr.aria-label]="deployment.branding().productName"><app-deployment-brand [branding]="deployment.branding()" /></a>
-    <nav class="entry-actions" data-guide-field="entry-login" aria-label="Account">
+    <nav class="entry-actions" data-guide-field="entry-login" [attr.aria-label]="'navigation.account.aria' | i18n">
       <button class="entry-auth-btn" type="button" matRipple [matRippleColor]="'rgba(255, 255, 255, 0.24)'"
         [disabled]="busy()" (click)="requestEntry('login')">
         <mat-icon>login</mat-icon><span>{{ 'landing.login' | i18n }}</span>

@@ -1,4 +1,9 @@
-import { afterEach, beforeEach, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, vi } from 'vitest';
+import { preloadAdapterMode } from './app/shared/core/base/adapter-loaders';
+
+beforeAll(async () => {
+  await Promise.all([preloadAdapterMode('local'), preloadAdapterMode('http')]);
+});
 
 // jsdom has no matchMedia; default desktop tests do not exercise responsive CSS.
 // Tests for viewport or native permissions override this with their own fixture.

@@ -1,0 +1,269 @@
+{
+  "version": 1,
+  "main": "main-8d94eb2e.js",
+  "startup": [
+    "main-8d94eb2e.js",
+    "chunk-66ae0f6e.js"
+  ],
+  "files": [
+    {
+      "name": "main-8d94eb2e.js",
+      "sha256": "a0e88f4aedca0748a0b28d333acfe01bbfa162f27a839410d4beff98fe98805b"
+    },
+    {
+      "name": "chunk-2081c94d.js",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "chunk-66ae0f6e.js",
+      "sha256": "fbff576b93e84316b7bca5ba5a5ef9fa761687aa81e9d615433016e84afe703b"
+    },
+    {
+      "name": "chunk-223ea88d.js",
+      "sha256": "2ee402e2129bd6b84422a4fd5272105cec76ec2dc3d11efaa82e312ae405230a"
+    },
+    {
+      "name": "chunk-5985759e.js",
+      "sha256": "eba6f2491116b9bca57dbbae031c262fd8828f86056e49a2d1f6423856b31ca5"
+    },
+    {
+      "name": "chunk-34b7d82a.js",
+      "sha256": "00b4d46ea79cfc2bf21d6dafd2cabdbd90193aaac89b4aa982d56fad61ce600e"
+    },
+    {
+      "name": "chunk-6fff5f82.js",
+      "sha256": "f47fa818f52ea3dd0ba92c3ff017d6e1ab2b257db02b1d94eab391de2dd3fe08"
+    },
+    {
+      "name": "chunk-c45e9bd1.js",
+      "sha256": "7437a537fcc01652f5b713702cac2936ff275234c3cd054aa71b408bdaae7766"
+    },
+    {
+      "name": "chunk-e50471f1.js",
+      "sha256": "6164ca31ce8c6ddb197c0673b17db85666b0e22f23eab1920f81e3552d13d2b4"
+    },
+    {
+      "name": "chunk-7d44d781.js",
+      "sha256": "acaa30f44a25e1bcb8a3d62317dfadab968e9b89252d2eaef5a7904292176c69"
+    },
+    {
+      "name": "chunk-bfcdb30d.js",
+      "sha256": "6bad5272e93840842017b7ff77ca40811640119c5a84897933d4ba996dede830"
+    },
+    {
+      "name": "chunk-7c480b09.js",
+      "sha256": "66015a9401cc1c638df732bcedae3df9ede97dae47e9508872065598560446a7"
+    },
+    {
+      "name": "chunk-c0d3d6c0.js",
+      "sha256": "c7a3404f9663b3f285c23539a3da17fdd2776dc459613a62108bec190c26b609"
+    },
+    {
+      "name": "chunk-24cbe3cb.js",
+      "sha256": "0d0ab73bfc133df4fc2772fa6d15b6c11e8c0fc280da65bc7fd107466f6f4ab9"
+    },
+    {
+      "name": "chunk-505d98e8.js",
+      "sha256": "d32057c50a6eb52dc175846bbe43a3ce6a66853edac5e547ebfdce921d146223"
+    },
+    {
+      "name": "chunk-d8c0058b.js",
+      "sha256": "27e52b4b50ed12d7a5443eff92bbd54521f56bcd549b001f16af8eb782b73fb9"
+    },
+    {
+      "name": "chunk-84aac333.js",
+      "sha256": "62577cab0b1305ed0d19bbe92b5ee58d01c5186cc44a3a12ad513ce248e47979"
+    },
+    {
+      "name": "chunk-6b59798f.js",
+      "sha256": "e0d55aebf0e7538db819394e4f0f7116f0cf22a987a2919528f722f3d4baec8e"
+    },
+    {
+      "name": "chunk-c02e47e2.js",
+      "sha256": "ec4fd1f1197410c407b77fccaef0bd7ffd813bb2f6ee0bf55bfc0d9da1ab08df"
+    },
+    {
+      "name": "chunk-c8788d7d.js",
+      "sha256": "1174b8d0f5564b1171ecebbda4b499c494b9b760de67449f644ac1fa56258a02"
+    },
+    {
+      "name": "chunk-2307ac8d.js",
+      "sha256": "fd73ab970f2316d7f779b5cb8fc75678ce5edca1e9334779fc7197e15fc7fe2f"
+    },
+    {
+      "name": "chunk-04bdd2ee.js",
+      "sha256": "7b7d1cddb2dc2bb20edd60b7497f84f414bce9727b367a199515d6cd52e71034"
+    },
+    {
+      "name": "chunk-4d932d9c.js",
+      "sha256": "e4207ecf93caf4f408bf8be4bf76eb9c940de3e4ffc92e0474032882682ca1c5"
+    },
+    {
+      "name": "chunk-9e4537a4.js",
+      "sha256": "2199ff77ab6d9d7bf629b520113c09905407a1fc7cfbd80df9f2782b12747d4c"
+    },
+    {
+      "name": "chunk-c42df148.js",
+      "sha256": "24624cf427c87a212eeeca37f9ea6b3f41a888301d92dad3327ba2fa2391626d"
+    },
+    {
+      "name": "chunk-8882c177.js",
+      "sha256": "ccddf6250fc78eac497845ada18ceb5c1606430c4ec6f1edcb1da7fe2dc545e2"
+    },
+    {
+      "name": "chunk-bc68995d.js",
+      "sha256": "7dd2cab995b5945b451096a76a0156a7d874c735e63a4db9c779c9b85e8653a3"
+    }
+  ],
+  "loads": {
+    "node_modules/@wireapp/core-crypto/dist/browser/corecrypto.js": [
+      "chunk-c02e47e2.js",
+      "main-8d94eb2e.js"
+    ],
+    "src/app/profile/components/settings-popups/settings-popups.component.ts": [
+      "chunk-c8788d7d.js",
+      "chunk-505d98e8.js",
+      "main-8d94eb2e.js",
+      "chunk-66ae0f6e.js"
+    ],
+    "src/app/shared/ui/components/notification-center-popup/notification-center-popup.component.ts": [
+      "chunk-2307ac8d.js",
+      "chunk-505d98e8.js",
+      "main-8d94eb2e.js",
+      "chunk-66ae0f6e.js"
+    ],
+    "src/app/operator/components/operator-configuration-popup/operator-configuration-popup.component.ts": [
+      "chunk-04bdd2ee.js",
+      "chunk-505d98e8.js",
+      "main-8d94eb2e.js",
+      "chunk-66ae0f6e.js"
+    ],
+    "src/app/operator/components/operator-update-popup/operator-update-popup.component.ts": [
+      "chunk-4d932d9c.js",
+      "chunk-505d98e8.js",
+      "main-8d94eb2e.js",
+      "chunk-66ae0f6e.js"
+    ],
+    "src/app/member/components/member-page.component.ts": [
+      "chunk-505d98e8.js",
+      "main-8d94eb2e.js",
+      "chunk-66ae0f6e.js"
+    ],
+    "src/app/app.config.ts": [
+      "chunk-66ae0f6e.js",
+      "main-8d94eb2e.js"
+    ],
+    "src/app/shared/ui/components/demo-bootstrap-selector/demo-bootstrap-selector.component.ts": [
+      "chunk-bfcdb30d.js",
+      "chunk-66ae0f6e.js",
+      "main-8d94eb2e.js"
+    ],
+    "src/app/app.ts": [
+      "chunk-66ae0f6e.js",
+      "main-8d94eb2e.js"
+    ],
+    "src/app/profile/components/profile-editor/profile-editor.component.ts": [
+      "chunk-d8c0058b.js",
+      "chunk-505d98e8.js",
+      "main-8d94eb2e.js",
+      "chunk-66ae0f6e.js",
+      "chunk-bc68995d.js"
+    ],
+    "src/app/shared/ui/components/explanation-popup/explanation-popup.component.ts": [
+      "chunk-84aac333.js",
+      "chunk-66ae0f6e.js",
+      "main-8d94eb2e.js"
+    ],
+    "src/app/shared/ui/components/document-viewer/index.ts": [
+      "chunk-66ae0f6e.js",
+      "main-8d94eb2e.js"
+    ],
+    "src/app/shared/ui/components/app-setup-popup/app-setup-popup.component.ts": [
+      "chunk-6b59798f.js",
+      "chunk-66ae0f6e.js",
+      "main-8d94eb2e.js"
+    ],
+    "src/app/entry/components/entry-page.component.ts": [
+      "chunk-66ae0f6e.js",
+      "main-8d94eb2e.js"
+    ],
+    "src/app/profile/components/integration-settings-popup/mcp-authorization.component.ts": [
+      "chunk-24cbe3cb.js",
+      "chunk-bc68995d.js",
+      "chunk-66ae0f6e.js",
+      "main-8d94eb2e.js"
+    ],
+    "components/dist/fesm2022/components-route-input-popup.component-CkNPqU_h.mjs": [
+      "chunk-7d44d781.js",
+      "chunk-66ae0f6e.js",
+      "main-8d94eb2e.js"
+    ],
+    "src/app/shared/core/base/local-adapters.ts": [
+      "chunk-66ae0f6e.js",
+      "main-8d94eb2e.js"
+    ],
+    "src/app/shared/core/http/services/accounts/users.service.ts": [
+      "chunk-7c480b09.js",
+      "chunk-c42df148.js",
+      "chunk-66ae0f6e.js",
+      "main-8d94eb2e.js"
+    ],
+    "src/app/shared/core/base/http-adapters.ts": [
+      "chunk-e50471f1.js",
+      "chunk-66ae0f6e.js",
+      "main-8d94eb2e.js",
+      "chunk-c42df148.js"
+    ],
+    "src/app/shared/core/base/adapter-loaders.ts": [
+      "chunk-66ae0f6e.js",
+      "main-8d94eb2e.js"
+    ],
+    "src/app/shared/core/base/services/notifications/firebase-messaging.service.ts": [
+      "chunk-66ae0f6e.js",
+      "main-8d94eb2e.js"
+    ],
+    "src/app/shared/core/local/seed/services/platform/static-content.service.ts": [
+      "chunk-c0d3d6c0.js",
+      "chunk-8882c177.js",
+      "chunk-66ae0f6e.js",
+      "main-8d94eb2e.js"
+    ],
+    "src/app/shared/core/local/seed/services/platform/demo-bootstrap.service.ts": [
+      "chunk-223ea88d.js",
+      "chunk-66ae0f6e.js",
+      "main-8d94eb2e.js",
+      "chunk-8882c177.js",
+      "chunk-9e4537a4.js"
+    ],
+    "src/main.ts": [
+      "main-8d94eb2e.js"
+    ],
+    "src/app/shared/core/local/seed/data/users.json": [
+      "chunk-2081c94d.js"
+    ],
+    "src/app/shared/core/common/app.db.ts": [
+      "chunk-66ae0f6e.js",
+      "main-8d94eb2e.js"
+    ],
+    "src/app/shared/core/local/seed/data/deployment-configuration.json": [
+      "chunk-5985759e.js"
+    ],
+    "src/app/shared/core/base/services/accounts/firebase-auth.service.ts": [
+      "chunk-34b7d82a.js",
+      "chunk-66ae0f6e.js",
+      "main-8d94eb2e.js"
+    ],
+    "src/app/shared/core/http/services/operator/operator-bootstrap-auth.service.ts": [
+      "chunk-6fff5f82.js",
+      "main-8d94eb2e.js"
+    ],
+    "src/app/shared/core/http/services/accounts/firebase-session-registry.service.ts": [
+      "chunk-c45e9bd1.js",
+      "main-8d94eb2e.js"
+    ],
+    "src/app/shared/core/local/source/services/accounts/users.service.ts": [
+      "chunk-66ae0f6e.js",
+      "main-8d94eb2e.js"
+    ]
+  }
+}

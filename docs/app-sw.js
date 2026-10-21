@@ -1,6 +1,6 @@
 const CACHE_PREFIX = 'myscoutee-template-runtime';
-const CACHE_VERSION = "build-8addae7883de-20261017080707";
-const BUILD_ID = "8addae7883de-20261017080707";
+const CACHE_VERSION = "build-1.4.5";
+const BUILD_ID = "1.4.5";
 const APP_CACHE = `${CACHE_PREFIX}-app-${CACHE_VERSION}`;
 const API_CACHE = `${CACHE_PREFIX}-api-${CACHE_VERSION}`;
 const MEDIA_CACHE = `${CACHE_PREFIX}-media-${CACHE_VERSION}`;
@@ -23,160 +23,12 @@ const PRECACHE_CORE_URLS = [
   './assets/icon/android-chrome-192x192.png',
   './assets/icon/android-chrome-512x512.png',
   './assets/logo/heart.png',
-  './assets/logo/heart.webp',
-  './assets/i18n/en.json',
-  './assets/i18n/hu.json'
+  './assets/logo/heart.webp'
 ];
 const PRECACHE_BUILD_URLS = [
-  "./chunk-2MSODNPO.js",
-  "./chunk-33QTWJBW.js",
-  "./chunk-3IUCBYAJ.js",
-  "./chunk-3QAVPBPO.js",
-  "./chunk-536VYR36.js",
-  "./chunk-5TRQ4BW2.js",
-  "./chunk-6MXRYKRU.js",
-  "./chunk-6ZTKTMI4.js",
-  "./chunk-74MFC4JM.js",
-  "./chunk-7G4Z4KNB.js",
-  "./chunk-ADFTMIRW.js",
-  "./chunk-AKFEEKOO.js",
-  "./chunk-ATCKV5NW.js",
-  "./chunk-AV72NKIQ.js",
-  "./chunk-AVEFQODZ.js",
-  "./chunk-B6Y7IE7T.js",
-  "./chunk-BMDHLQZA.js",
-  "./chunk-BQKYIMKT.js",
-  "./chunk-D47FMLE2.js",
-  "./chunk-DDO5XJ2W.js",
-  "./chunk-DRJG6QUB.js",
-  "./chunk-EFYBZYLU.js",
-  "./chunk-EODK6EUD.js",
-  "./chunk-EVABSSHG.js",
-  "./chunk-EVR4LUVJ.js",
-  "./chunk-FL2X66UT.js",
-  "./chunk-G4VKVSND.js",
-  "./chunk-G5Q43UQA.js",
-  "./chunk-GENDD3MX.js",
-  "./chunk-GIMD6FV5.js",
-  "./chunk-GSXQG3BJ.js",
-  "./chunk-GVPIMTZQ.js",
-  "./chunk-HLYWPDLB.js",
-  "./chunk-HVFE4CSI.js",
-  "./chunk-HVFRFJSL.js",
-  "./chunk-IKI7WSBU.js",
-  "./chunk-IZAYKUWJ.js",
-  "./chunk-J3KMBPGO.js",
-  "./chunk-JBGOTLDY.js",
-  "./chunk-JOHLNDA2.js",
-  "./chunk-JRYPLQ46.js",
-  "./chunk-JXCXUE2L.js",
-  "./chunk-KDBBY777.js",
-  "./chunk-KESPDL77.js",
-  "./chunk-LFEGD5AN.js",
-  "./chunk-LGTRISRU.js",
-  "./chunk-LSIHGRHO.js",
-  "./chunk-LTSIUQT5.js",
-  "./chunk-MANNRVDE.js",
-  "./chunk-O4WJN4RD.js",
-  "./chunk-ORG3A44T.js",
-  "./chunk-OZNYKZ3W.js",
-  "./chunk-P2DFEYBK.js",
-  "./chunk-P647SIDA.js",
-  "./chunk-PEMGJ3OW.js",
-  "./chunk-PLSLNY3W.js",
-  "./chunk-PMAHAV5Q.js",
-  "./chunk-Q6L5A7SF.js",
-  "./chunk-QJ3PXODU.js",
-  "./chunk-RCVNK2IK.js",
-  "./chunk-RIUHZN4J.js",
-  "./chunk-RYI4K4CC.js",
-  "./chunk-SBQRWVFY.js",
-  "./chunk-SFERP2OI.js",
-  "./chunk-T7UTZCVG.js",
-  "./chunk-TC6XEAGH.js",
-  "./chunk-TCZJVN22.js",
-  "./chunk-TN3WY6RW.js",
-  "./chunk-TU2LSO22.js",
-  "./chunk-TUYZLXXR.js",
-  "./chunk-WD2BVM7X.js",
-  "./chunk-WYC4CSSU.js",
-  "./chunk-WZPSH26P.js",
-  "./chunk-XMIM3FWY.js",
-  "./chunk-XNMQ6Q3R.js",
-  "./chunk-XVBUALQA.js",
-  "./chunk-XZAKLJ54.js",
-  "./chunk-Y3IP3AP3.js",
-  "./chunk-YL5LZFYG.js",
-  "./chunk-YTYDZR5K.js",
-  "./chunk-Z34KCHOE.js",
-  "./chunk-ZKH4UGEP.js",
-  "./chunk-ZMKPFSXH.js",
-  "./main-CF2U4LOD.js",
-  "./media/material-icons-JLIDJUWE.woff",
-  "./media/material-icons-LEZCGFVT.woff2",
-  "./media/material-icons-outlined-7BWLPMFK.woff2",
-  "./media/material-icons-outlined-PCUTWIDZ.woff",
-  "./media/material-icons-round-SLOHZIXU.woff",
-  "./media/material-icons-round-WEHMTW23.woff2",
-  "./media/material-icons-sharp-HCCYMPXE.woff2",
-  "./media/material-icons-sharp-U4OLFP3G.woff",
-  "./media/material-icons-two-tone-LCGWGE2N.woff",
-  "./media/material-icons-two-tone-M5N5K6F5.woff2",
-  "./media/roboto-cyrillic-300-normal-LEZQ3MKH.woff",
-  "./media/roboto-cyrillic-300-normal-LQYCE6GI.woff2",
-  "./media/roboto-cyrillic-400-normal-JZANGCVN.woff",
-  "./media/roboto-cyrillic-400-normal-V3H5IIDP.woff2",
-  "./media/roboto-cyrillic-500-normal-P7R5B5PS.woff",
-  "./media/roboto-cyrillic-500-normal-RHUEYUET.woff2",
-  "./media/roboto-cyrillic-ext-300-normal-7ILTRYFN.woff",
-  "./media/roboto-cyrillic-ext-300-normal-D7ENCFLY.woff2",
-  "./media/roboto-cyrillic-ext-400-normal-37DU6NPA.woff",
-  "./media/roboto-cyrillic-ext-400-normal-J2JSVX6B.woff2",
-  "./media/roboto-cyrillic-ext-500-normal-CDI2P3CX.woff2",
-  "./media/roboto-cyrillic-ext-500-normal-LPNI233Q.woff",
-  "./media/roboto-greek-300-normal-7NUG2XNM.woff2",
-  "./media/roboto-greek-300-normal-XWVECM7G.woff",
-  "./media/roboto-greek-400-normal-S2O6A3MB.woff",
-  "./media/roboto-greek-400-normal-VPVGP5YU.woff2",
-  "./media/roboto-greek-500-normal-2BKWU2PG.woff",
-  "./media/roboto-greek-500-normal-XWJR77VV.woff2",
-  "./media/roboto-greek-ext-300-normal-P3ERUMZ4.woff",
-  "./media/roboto-greek-ext-300-normal-UB4UOTHV.woff2",
-  "./media/roboto-greek-ext-400-normal-AFHRTL5D.woff",
-  "./media/roboto-greek-ext-400-normal-IONFYYIZ.woff2",
-  "./media/roboto-greek-ext-500-normal-EPUYIZBL.woff",
-  "./media/roboto-greek-ext-500-normal-UMWLP6CJ.woff2",
-  "./media/roboto-latin-300-normal-OEKYIRZ4.woff",
-  "./media/roboto-latin-300-normal-ZNJYGCVX.woff2",
-  "./media/roboto-latin-400-normal-LOX3CHMS.woff2",
-  "./media/roboto-latin-400-normal-TWCS3G4O.woff",
-  "./media/roboto-latin-500-normal-D6YDQ3CR.woff2",
-  "./media/roboto-latin-500-normal-HOJMQAXQ.woff",
-  "./media/roboto-latin-ext-300-normal-H24XD56Q.woff",
-  "./media/roboto-latin-ext-300-normal-ROZM7SZ2.woff2",
-  "./media/roboto-latin-ext-400-normal-DKWFTT22.woff",
-  "./media/roboto-latin-ext-400-normal-JLTDD7L3.woff2",
-  "./media/roboto-latin-ext-500-normal-JYCUQIKH.woff2",
-  "./media/roboto-latin-ext-500-normal-QWBPCWM4.woff",
-  "./media/roboto-math-300-normal-6WXYN4KX.woff2",
-  "./media/roboto-math-300-normal-LOKQ5YA5.woff",
-  "./media/roboto-math-400-normal-DRZ46ZLW.woff",
-  "./media/roboto-math-400-normal-M62DA447.woff2",
-  "./media/roboto-math-500-normal-NNN526L6.woff",
-  "./media/roboto-math-500-normal-X2DSP56O.woff2",
-  "./media/roboto-symbols-300-normal-EOLMKP7X.woff2",
-  "./media/roboto-symbols-300-normal-GV2F4YAV.woff",
-  "./media/roboto-symbols-400-normal-RS3SF2FB.woff2",
-  "./media/roboto-symbols-400-normal-ZCAYNMUT.woff",
-  "./media/roboto-symbols-500-normal-CCVW4T3A.woff",
-  "./media/roboto-symbols-500-normal-USW6FYVZ.woff2",
-  "./media/roboto-vietnamese-300-normal-FARA53FV.woff",
-  "./media/roboto-vietnamese-300-normal-JVDCXID7.woff2",
-  "./media/roboto-vietnamese-400-normal-KACKQ7ZL.woff2",
-  "./media/roboto-vietnamese-400-normal-R3IJFZXV.woff",
-  "./media/roboto-vietnamese-500-normal-SNWSONII.woff",
-  "./media/roboto-vietnamese-500-normal-VJX2WMYG.woff2",
-  "./styles-BOT27C4F.css"
+  "./chunk-66ae0f6e.js",
+  "./main-8d94eb2e.js",
+  "./styles-RF4YJR7Z.css"
 ];
 const PRECACHE_URLS = [...PRECACHE_CORE_URLS, ...PRECACHE_BUILD_URLS];
 
@@ -193,7 +45,9 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(APP_CACHE)
       .then(cache => cache.addAll(
-        PRECACHE_URLS.map(url => new Request(url, { cache: 'reload' }))
+        PRECACHE_URLS.map(url => new Request(url, {
+          cache: /-[a-z0-9]{8}\.(?:js|css)$/i.test(url) ? 'default' : 'reload'
+        }))
       ))
       .catch(async error => {
         await caches.delete(APP_CACHE);
@@ -379,7 +233,7 @@ async function serveAppShell(request) {
 async function networkFirstStaticAsset(request) {
   // Angular content-hashed bundles are immutable, including lazy chunks.
   // Reuse the current/retained build cache before contacting the network.
-  if (/\/[\w.-]+-[A-Z0-9]{8}\.(?:js|css)$/.test(new URL(request.url).pathname)) {
+  if (/\/[\w.-]+-[A-Z0-9]{8}\.(?:js|css)$/i.test(new URL(request.url).pathname)) {
     const cached = await matchAppBundleCache(request);
     if (cached) {
       return cached;
