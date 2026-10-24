@@ -1,3 +1,4 @@
+import { SessionService } from './shared/core/base/services/accounts/session.service';
 import { sessionAuthInterceptor } from './shared/core/http/interceptors/accounts/session-auth.interceptor';
 import { anonymousLanding } from './shared/core/common/demo-failover';
 import { I18nService } from './shared/core/base/services/localization/i18n.service';
@@ -13,7 +14,7 @@ import { ROUTE_CONFIG } from './shared/core/base/config';
 import { preloadAdapterMode, type AdapterMode } from './shared/core/base/adapter-loaders';
 export const appConfig: ApplicationConfig={
   providers: [
-    provideAppInitializer(() => inject(I18nService).initialize()),
+    provideAppInitializer(() => Promise.all([inject(I18nService).initialize(), inject(SessionService).ensureSession()])),
     ...SHARED_UI_PROVIDERS,provideBrowserGlobalErrorListeners(),provideRouter(routes),
   ]
 };

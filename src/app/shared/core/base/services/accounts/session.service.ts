@@ -46,6 +46,10 @@ export class SessionService {
   private readonly injector = inject(Injector);
   private readonly offlineCache = inject(OfflineCacheService);
   private cacheClear: Promise<void> = Promise.resolve();
+  private sessionStorageRevision = 0;
+  private sessionStorageWrite: Promise<void> = Promise.resolve();
+  private sessionRestore: Promise<void> = Promise.resolve();
+  private sessionCacheKeyPromise: Promise<CryptoKey> | null = null;
   private readonly sessionRef = signal<AppSession | null>(this.loadStoredSession());
   private readonly authModeRef = signal<AuthMode>('selector');
   private readonly authBusyRef = signal(false);
@@ -117,6 +121,8 @@ export class SessionService {
   }
 
   async ensureSession(): Promise<AppSession | null> {
+    await this.sessionRestore;
+    await this.sessionStorageWrite;
     const current = this.sessionRef();
     if (current?.kind === 'authenticated' && !this.isFutureIso(current.expiresAt)) {
       this.rejectSession(current.sessionId);
@@ -241,6 +247,7 @@ export class SessionService {
   }
 
   async restoreAuthSession(): Promise<AppSession | null> {
+    await this.sessionRestore;
     if (this.sessionRef()?.kind === 'authenticated') return this.ensureSession();
     if (this.authBusyRef()) {
       return this.sessionRef();
@@ -438,10 +445,74 @@ export class SessionService {
     if (nextId) this.offlineCache.activateUser(nextId);
     this.clearAdminSupportSessionStorage();
     this.sessionRef.set(session);
+    const revision = ++this.sessionStorageRevision;
     if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(SessionService.SESSION_STORAGE_KEY, JSON.stringify(session));
+      if (session.kind === 'authenticated') {
+        localStorage.removeItem(SessionService.SESSION_STORAGE_KEY);
+        this.storeAuthenticatedSession(session, revision);
+      } else {
+        localStorage.setItem(SessionService.SESSION_STORAGE_KEY, JSON.stringify({
+          kind: 'demo', userId: session.userId, sessionId: session.sessionId, supportContext: session.supportContext
+        }));
+      }
     }
     if (session.kind === 'demo' && !session.supportContext) prewarmDemoFailover();
+  }
+
+  private storeAuthenticatedSession(session: Extract<AppSession, { kind: 'authenticated' }>, revision: number): void {
+    this.sessionStorageWrite = this.sessionStorageWrite.then(async () => {
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const ciphertext = await crypto.subtle.encrypt({
+        name: 'AES-GCM', iv, additionalData: new TextEncoder().encode(SessionService.SESSION_STORAGE_KEY)
+      }, await this.sessionCacheKey(), new TextEncoder().encode(JSON.stringify(session)));
+      // Logout or a newer login/avatar update must win over a late storage write.
+      if (revision !== this.sessionStorageRevision) return;
+      localStorage.setItem(SessionService.SESSION_STORAGE_KEY, JSON.stringify({
+        kind: 'authenticated', version: 1, iv: Array.from(iv), ciphertext: Array.from(new Uint8Array(ciphertext))
+      }));
+    }).catch(() => {
+      // Keep the active in-memory session usable; never fall back to plaintext.
+    });
+  }
+
+  private async restoreEncryptedSession(raw: string, stored: { iv?: number[]; ciphertext?: number[] }, revision: number): Promise<void> {
+    try {
+      if (!Array.isArray(stored.iv) || stored.iv.length !== 12
+        || !Array.isArray(stored.ciphertext) || stored.ciphertext.length < 16) throw new Error('Invalid encrypted session');
+      const plaintext = await crypto.subtle.decrypt({
+        name: 'AES-GCM', iv: Uint8Array.from(stored.iv),
+        additionalData: new TextEncoder().encode(SessionService.SESSION_STORAGE_KEY)
+      }, await this.sessionCacheKey(), Uint8Array.from(stored.ciphertext));
+      const session = this.parseStoredSession(JSON.parse(new TextDecoder().decode(plaintext)));
+      if (revision !== this.sessionStorageRevision || this.isAdminSupportSession(this.sessionRef())
+        || localStorage.getItem(SessionService.SESSION_STORAGE_KEY) !== raw) return;
+      if (session?.kind !== 'authenticated') {
+        localStorage.removeItem(SessionService.SESSION_STORAGE_KEY);
+        return;
+      }
+      this.offlineCache.activateUser(session.profile.id);
+      this.sessionRef.set(session);
+    } catch {
+      if (revision === this.sessionStorageRevision && localStorage.getItem(SessionService.SESSION_STORAGE_KEY) === raw) {
+        localStorage.removeItem(SessionService.SESSION_STORAGE_KEY);
+      }
+    }
+  }
+
+  private async sessionCacheKey(): Promise<CryptoKey> {
+    if (!this.sessionCacheKeyPromise) {
+      this.sessionCacheKeyPromise = (async () => {
+        // Reuse the same scoped key store and non-extractable AES-GCM pattern as location caching.
+        const { AppMemoryDb } = await import('../../../common/app.db');
+        const db = this.injector.get(AppMemoryDb);
+        const keyId = 'session.cache-key.v1';
+        const existing = await db.readIndexedDbTableEntry<CryptoKey>(keyId);
+        if (existing) return existing;
+        const generated = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+        return db.updateIndexedDbTableEntry<CryptoKey>(keyId, current => current ?? generated);
+      })().catch(error => { this.sessionCacheKeyPromise = null; throw error; });
+    }
+    return this.sessionCacheKeyPromise;
   }
 
   private reusableSessionId(profile: Pick<AccountAuthProfileDto, 'email'>): string {
@@ -457,6 +528,7 @@ export class SessionService {
   }
 
   private clearStoredSession(): void {
+    this.sessionStorageRevision++;
     const adminSupportSession = this.isAdminSupportSession(this.sessionRef());
     this.cacheClear = this.offlineCache.clearUser(this.activeUserId());
     this.sessionRef.set(null);
@@ -488,62 +560,69 @@ export class SessionService {
 
   private loadStoredSession(): AppSession | null {
     const adminSupportSession = this.loadStoredAdminSupportSession();
-    if (adminSupportSession) {
+    if (typeof localStorage === 'undefined') return adminSupportSession;
+    const raw = localStorage.getItem(SessionService.SESSION_STORAGE_KEY);
+    if (!raw) return adminSupportSession;
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed.kind === 'authenticated' && parsed.version === 1) {
+        const revision = this.sessionStorageRevision;
+        if (!adminSupportSession) this.sessionRestore = this.restoreEncryptedSession(raw, parsed, revision);
+        return adminSupportSession;
+      }
+      const session = this.parseStoredSession(parsed);
+      if (parsed.kind === 'authenticated') {
+        // Migrate the existing account session without retaining its plaintext.
+        localStorage.removeItem(SessionService.SESSION_STORAGE_KEY);
+        if (session?.kind === 'authenticated') this.storeAuthenticatedSession(session, this.sessionStorageRevision);
+      }
+      return adminSupportSession ?? session;
+    } catch {
       return adminSupportSession;
     }
+  }
 
-    if (typeof localStorage === 'undefined') {
-      return null;
+  private parseStoredSession(parsed: Partial<AppSession>): AppSession | null {
+    if (parsed.kind === 'demo' && typeof parsed.userId === 'string' && parsed.userId.trim().length > 0) {
+      return {
+        kind: 'demo',
+        userId: parsed.userId.trim(),
+        sessionId: typeof parsed.sessionId === 'string'
+          ? parsed.sessionId.trim() || undefined
+          : undefined,
+        supportContext: this.normalizeSupportContext(
+          (parsed as { supportContext?: Partial<SupportSessionContext> }).supportContext
+        )
+      };
     }
-    const raw = localStorage.getItem(SessionService.SESSION_STORAGE_KEY);
-    if (!raw) {
-      return null;
+    if (
+      parsed.kind === 'authenticated' &&
+      typeof parsed.accessToken === 'string' && !!parsed.accessToken &&
+      typeof parsed.expiresAt === 'string' && this.isFutureIso(parsed.expiresAt) &&
+      parsed.profile &&
+      typeof parsed.sessionId === 'string' &&
+      parsed.sessionId.trim().length > 0 &&
+      typeof parsed.profile.id === 'string' &&
+      typeof parsed.profile.name === 'string' &&
+      typeof parsed.profile.email === 'string' &&
+      typeof parsed.profile.initials === 'string'
+    ) {
+      return {
+        kind: 'authenticated',
+        accessToken: parsed.accessToken, expiresAt: parsed.expiresAt,
+        sessionId: parsed.sessionId.trim(),
+        avatarImageUrl: typeof parsed.avatarImageUrl === 'string' ? parsed.avatarImageUrl : undefined,
+        avatarImageDataUrl: avatarPreviewDataUrl(parsed.avatarImageDataUrl),
+        profile: {
+          id: parsed.profile.id,
+          name: parsed.profile.name,
+          email: parsed.profile.email,
+          initials: parsed.profile.initials,
+          imageUrl: typeof parsed.profile.imageUrl === 'string' ? parsed.profile.imageUrl : undefined
+        }
+      };
     }
-    try {
-      const parsed = JSON.parse(raw) as Partial<AppSession>;
-      if (parsed.kind === 'demo' && typeof parsed.userId === 'string' && parsed.userId.trim().length > 0) {
-        return {
-          kind: 'demo',
-          userId: parsed.userId.trim(),
-          sessionId: typeof parsed.sessionId === 'string'
-            ? parsed.sessionId.trim() || undefined
-            : undefined,
-          supportContext: this.normalizeSupportContext(
-            (parsed as { supportContext?: Partial<SupportSessionContext> }).supportContext
-          )
-        };
-      }
-      if (
-        parsed.kind === 'authenticated' &&
-        typeof parsed.accessToken === 'string' && !!parsed.accessToken &&
-        typeof parsed.expiresAt === 'string' && this.isFutureIso(parsed.expiresAt) &&
-        parsed.profile &&
-        typeof parsed.sessionId === 'string' &&
-        parsed.sessionId.trim().length > 0 &&
-        typeof parsed.profile.id === 'string' &&
-        typeof parsed.profile.name === 'string' &&
-        typeof parsed.profile.email === 'string' &&
-        typeof parsed.profile.initials === 'string'
-      ) {
-        return {
-          kind: 'authenticated',
-          accessToken: parsed.accessToken, expiresAt: parsed.expiresAt,
-          sessionId: parsed.sessionId.trim(),
-          avatarImageUrl: typeof parsed.avatarImageUrl === 'string' ? parsed.avatarImageUrl : undefined,
-          avatarImageDataUrl: avatarPreviewDataUrl(parsed.avatarImageDataUrl),
-          profile: {
-            id: parsed.profile.id,
-            name: parsed.profile.name,
-            email: parsed.profile.email,
-            initials: parsed.profile.initials,
-            imageUrl: typeof parsed.profile.imageUrl === 'string' ? parsed.profile.imageUrl : undefined
-          }
-        };
-      }
-      return null;
-    } catch {
-      return null;
-    }
+    return null;
   }
 
   private persistAdminSupportSession(

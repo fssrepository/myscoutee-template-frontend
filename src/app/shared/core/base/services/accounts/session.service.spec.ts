@@ -6,6 +6,7 @@ import type { FirebaseAuthRequestDto } from '../../../contracts/accounts/user.in
 import { HttpSessionRegistryService } from '../../../http/services/accounts/session-registry.service';
 import { FirebaseAuthService } from './firebase-auth.service';
 import { SessionService } from './session.service';
+import { AppMemoryDb } from '../../../common/app.db';
 
 describe('SessionService account sessions', () => {
   const originalActivitiesDataSource = environment.activitiesDataSource;
@@ -21,7 +22,11 @@ describe('SessionService account sessions', () => {
   const revokeDemoSession = vi.fn();
   const revokeSession = vi.fn();
 
-  beforeEach(() => {
+  const keys = new Map<string, CryptoKey>();
+  beforeEach(async () => {
+    const { webcrypto } = await vi.importActual<{ webcrypto: Crypto }>('node:crypto');
+    vi.stubGlobal('crypto', webcrypto);
+    keys.clear();
     // Session tests do not start the unrelated asynchronous messaging tree.
     vi.spyOn(SessionService.prototype as unknown as {
       initializeFirebaseMessagingForSession(session: unknown): Promise<void>;
@@ -47,6 +52,14 @@ describe('SessionService account sessions', () => {
     TestBed.configureTestingModule({
       providers: [
         SessionService,
+        { provide: AppMemoryDb, useValue: {
+          readIndexedDbTableEntry: async (key: string) => keys.get(key) ?? null,
+          updateIndexedDbTableEntry: async (key: string, update: (current: CryptoKey | null) => CryptoKey) => {
+            const value = structuredClone(update(keys.get(key) ?? null));
+            keys.set(key, value);
+            return structuredClone(value);
+          }
+        } },
         {
           provide: FirebaseAuthService,
           useValue: {
@@ -70,15 +83,17 @@ describe('SessionService account sessions', () => {
     });
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await TestBed.inject(SessionService).ensureSession();
     environment.activitiesDataSource = originalActivitiesDataSource;
     TestBed.resetTestingModule();
     localStorage.clear();
     sessionStorage.clear();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
-  it('persists only the current Firebase session avatar preview and restores it', () => {
+  it('persists only the current Firebase session avatar preview and restores it', async () => {
     const session = { kind: 'authenticated', accessToken: 'app-token', expiresAt: '2099-07-29T12:00:00Z', sessionId: 'current-session', profile: {
       id: 'firebase-user', name: 'User', email: 'user@example.test', initials: 'U'
     } };
@@ -88,13 +103,13 @@ describe('SessionService account sessions', () => {
     expect(service.currentSession()).not.toHaveProperty('avatarImageUrl', '/wrong.webp');
     service.setSessionAvatarPreview('current-session', '/correct.webp');
     expect(service.currentSession()).toMatchObject({ avatarImageUrl: '/correct.webp' });
-    expect(JSON.parse(localStorage.getItem(APP_STORAGE_KEYS.session)!)).toMatchObject({ avatarImageUrl: '/correct.webp' });
-    expect((service as unknown as { loadStoredSession(): unknown }).loadStoredSession())
-      .toMatchObject({ avatarImageUrl: '/correct.webp' });
+    await service.ensureSession();
+    const restored = TestBed.runInInjectionContext(() => new SessionService());
+    await expect(restored.ensureSession()).resolves.toMatchObject({ avatarImageUrl: '/correct.webp' });
     expect(firebaseRestore).not.toHaveBeenCalled();
   });
 
-  it('keeps image bytes across restoration but rejects stale session/source results and clears changed photos', () => {
+  it('keeps image bytes across restoration but rejects stale session/source results and clears changed photos', async () => {
     localStorage.setItem(APP_STORAGE_KEYS.session, JSON.stringify({ kind: 'authenticated', accessToken: 'app-token', expiresAt: '2099-07-29T12:00:00Z', sessionId: 'current',
       profile: { id: 'firebase-user', name: 'User', email: 'user@example.test', initials: 'U' }, avatarImageUrl: '/photo.webp' }));
     const service = TestBed.inject(SessionService);
@@ -104,8 +119,9 @@ describe('SessionService account sessions', () => {
     expect(service.currentSession()).not.toHaveProperty('avatarImageDataUrl', preview);
     service.setSessionAvatarPreviewData('current', '/photo.webp', preview);
     service.setSessionAvatarPreview('current', '/photo.webp');
-    expect((service as unknown as { loadStoredSession(): unknown }).loadStoredSession())
-      .toMatchObject({ avatarImageDataUrl: preview });
+    await service.ensureSession();
+    const restored = TestBed.runInInjectionContext(() => new SessionService());
+    await expect(restored.ensureSession()).resolves.toMatchObject({ avatarImageDataUrl: preview });
     service.setSessionAvatarPreview('current', '');
     expect(service.currentSession()).toHaveProperty('avatarImageDataUrl', undefined);
     service.setSessionAvatarPreviewData('current', '/photo.webp', preview);
@@ -127,10 +143,70 @@ describe('SessionService account sessions', () => {
       kind: 'authenticated', profile: { id: 'account-user' }, accessToken: 'app-token'
     });
     expect(await service.getAccessToken()).toBe('app-token');
-    expect(localStorage.getItem(APP_STORAGE_KEYS.session)).not.toContain('installer-password');
+    await service.ensureSession();
+    const stored = localStorage.getItem(APP_STORAGE_KEYS.session)!;
+    expect(JSON.parse(stored)).toMatchObject({ kind: 'authenticated', version: 1 });
+    for (const value of ['installer-password', 'app-token', installerEmail, 'account-user']) expect(stored).not.toContain(value);
+    const key = keys.get('session.cache-key.v1')!;
+    expect(key.extractable).toBe(false);
+    await expect(crypto.subtle.exportKey('raw', key)).rejects.toThrow();
+    const restored = TestBed.runInInjectionContext(() => new SessionService());
+    await expect(restored.getAccessToken()).resolves.toBe('app-token');
     expect(registerPasswordLogin).toHaveBeenCalledWith(expect.stringMatching(/^session:/),
       expect.objectContaining({ email: installerEmail, password: 'installer-password' }));
     expect(firebaseSignIn).not.toHaveBeenCalled();
+  });
+
+  it('migrates the existing plaintext account session and restores it while offline', async () => {
+    localStorage.setItem(APP_STORAGE_KEYS.session, JSON.stringify({ kind: 'authenticated', ...loginResponse('legacy').session }));
+    const service = TestBed.inject(SessionService);
+    expect(localStorage.getItem(APP_STORAGE_KEYS.session)).toBeNull();
+    await service.ensureSession();
+    expect(localStorage.getItem(APP_STORAGE_KEYS.session)).not.toContain('app-token');
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+    const restored = TestBed.runInInjectionContext(() => new SessionService());
+    await expect(restored.ensureSession()).resolves.toMatchObject({ sessionId: 'legacy', accessToken: 'app-token' });
+    expect(registerLogin).not.toHaveBeenCalled();
+    expect(firebaseRestore).not.toHaveBeenCalled();
+  });
+
+  it('rejects tampered ciphertext without accepting the stored account identity', async () => {
+    localStorage.setItem(APP_STORAGE_KEYS.session, JSON.stringify({ kind: 'authenticated', ...loginResponse('tampered').session }));
+    await TestBed.inject(SessionService).ensureSession();
+    const stored = JSON.parse(localStorage.getItem(APP_STORAGE_KEYS.session)!);
+    stored.ciphertext[0] ^= 1;
+    localStorage.setItem(APP_STORAGE_KEYS.session, JSON.stringify(stored));
+    const restored = TestBed.runInInjectionContext(() => new SessionService());
+    await expect(restored.ensureSession()).resolves.toBeNull();
+    expect(localStorage.getItem(APP_STORAGE_KEYS.session)).toBeNull();
+  });
+
+  it('keeps an account in memory without storing plaintext when encryption is unavailable', async () => {
+    registerPasswordLogin.mockResolvedValue(loginResponse('unavailable'));
+    vi.spyOn(crypto.subtle, 'generateKey').mockRejectedValue(new Error('Storage unavailable'));
+    const service = TestBed.inject(SessionService);
+    await service.startAuthSession(emailSignInRequest());
+    await expect(service.ensureSession()).resolves.toMatchObject({ accessToken: 'app-token' });
+    expect(localStorage.getItem(APP_STORAGE_KEYS.session)).toBeNull();
+  });
+
+  it('does not replace a newly selected support perspective with a pending account restoration', async () => {
+    localStorage.setItem(APP_STORAGE_KEYS.session, JSON.stringify({ kind: 'authenticated', ...loginResponse('admin').session }));
+    await TestBed.inject(SessionService).ensureSession();
+    const stored = localStorage.getItem(APP_STORAGE_KEYS.session);
+    const restored = TestBed.runInInjectionContext(() => new SessionService());
+    restored.startDemoSession('reported-user', { supportContext: { kind: 'admin-support', targetUrl: '/game?supportTarget=member' } });
+    await expect(restored.ensureSession()).resolves.toMatchObject({ kind: 'demo', userId: 'reported-user' });
+    expect(localStorage.getItem(APP_STORAGE_KEYS.session)).toBe(stored);
+  });
+
+  it('does not resurrect a logged-out account after a pending encrypted write', async () => {
+    localStorage.setItem(APP_STORAGE_KEYS.session, JSON.stringify({ kind: 'authenticated', ...loginResponse('pending').session }));
+    const service = TestBed.inject(SessionService);
+    service.rejectSession('pending');
+    await service.ensureSession();
+    expect(localStorage.getItem(APP_STORAGE_KEYS.session)).toBeNull();
+    expect(service.currentSession()).toBeNull();
   });
 
   it('exchanges Firebase identity proof for the same canonical account session', async () => {
