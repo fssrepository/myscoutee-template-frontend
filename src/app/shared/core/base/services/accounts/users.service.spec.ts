@@ -1,3 +1,4 @@
+import { HTTP_ADAPTER } from '../../adapter-loaders';
 import { TestBed } from '@angular/core/testing';
 import { environment } from '../../../../../../environments/environment';
 import { UserDto } from '../../../contracts/accounts/user.interface';
@@ -55,5 +56,34 @@ describe('minimal user adapter and session boundary', () => {
     expect(users.peekCurrentUser()?.id).toBe('member');
     identity = 'replacement';
     expect(users.peekCurrentUser()).toBeNull();
+  });
+});
+
+
+describe('Location eligibility before account adapters are loaded', () => {
+  it('loads the HTTP account adapter on demand and forwards coordinates', async () => {
+    const coordinates = { latitude: 47.5, longitude: 19 };
+    const result = { eligible: true };
+    const checkLocationEligibility = vi.fn().mockResolvedValue(result);
+    const get = vi.fn().mockResolvedValue({ checkLocationEligibility });
+    const service = Object.assign(Object.create(UsersService.prototype), {
+      isLocalRouteEnabled: () => false, transportAdapters: { get }
+    }) as UsersService;
+    expect(await service.checkLocationEligibility(coordinates)).toBe(result);
+    expect(get).toHaveBeenCalledExactlyOnceWith(HTTP_ADAPTER.USERS);
+    expect(checkLocationEligibility).toHaveBeenCalledExactlyOnceWith(coordinates);
+  });
+
+  it('keeps local eligibility on the local adapter without loading HTTP code', async () => {
+    const result = { eligible: false };
+    const checkLocationEligibility = vi.fn().mockResolvedValue(result);
+    const get = vi.fn();
+    const service = Object.assign(Object.create(UsersService.prototype), {
+      isLocalRouteEnabled: () => true, transportAdapters: { get },
+      local: { checkLocationEligibility }
+    }) as UsersService;
+    expect(await service.checkLocationEligibility()).toBe(result);
+    expect(get).not.toHaveBeenCalled();
+    expect(checkLocationEligibility).toHaveBeenCalledExactlyOnceWith(undefined);
   });
 });

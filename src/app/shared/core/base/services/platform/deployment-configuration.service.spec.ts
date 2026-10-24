@@ -1,5 +1,7 @@
 import { DOCUMENT } from '@angular/common';
 import { TestBed } from '@angular/core/testing';
+import { NavigationEnd, Router, type Event } from '@angular/router';
+import { Subject } from 'rxjs';
 
 import { DEFAULT_DEPLOYMENT_BRANDING, DEFAULT_DEPLOYMENT_CONFIGURATION } from '../../../contracts/platform/deployment-configuration.interface';
 import { HttpDeploymentConfigurationService } from '../../../http/services/platform/deployment-configuration.service';
@@ -17,7 +19,12 @@ describe('DeploymentConfigurationService', () => {
   let originalCreateObjectUrl: PropertyDescriptor | undefined;
   let originalRevokeObjectUrl: PropertyDescriptor | undefined;
 
+  let routerEvents: Subject<Event>;
+  let routerStub: { url: string; events: Subject<Event> };
+
   beforeEach(() => {
+    routerEvents = new Subject<Event>();
+    routerStub = { url: '/', events: routerEvents };
     loadLocalBranding.mockReset();
     createObjectUrl.mockReset();
     revokeObjectUrl.mockReset();
@@ -65,6 +72,7 @@ describe('DeploymentConfigurationService', () => {
     TestBed.configureTestingModule({
       providers: [
         DeploymentConfigurationService,
+        { provide: Router, useValue: routerStub },
         {
           provide: LocalDeploymentConfigurationService,
           useValue: { loadBranding: loadLocalBranding }
@@ -84,6 +92,39 @@ describe('DeploymentConfigurationService', () => {
         }
       ]
     });
+  });
+
+  it('uses the current page at startup without query parameters or fragments', () => {
+    routerStub.url = '/entry?redirect=%2Fgame#top';
+    TestBed.inject(DeploymentConfigurationService);
+
+    expect(linkHref('link[rel="canonical"]'))
+      .toBe(new URL('entry', document.baseURI).href);
+    expect(metaContent('meta[property="og:url"]'))
+      .toBe(new URL('entry', document.baseURI).href);
+  });
+
+  it('follows the final redirected route and preserves it when branding changes', () => {
+    const service = TestBed.inject(DeploymentConfigurationService);
+    routerStub.url = '/privacy-policy?lang=en#consent';
+    routerEvents.next(new NavigationEnd(1, '/old', routerStub.url));
+
+    expect(linkHref('link[rel="canonical"]'))
+      .toBe(new URL('privacy-policy', document.baseURI).href);
+    service.applyBranding(DEFAULT_DEPLOYMENT_BRANDING);
+    expect(linkHref('link[rel="canonical"]'))
+      .toBe(new URL('privacy-policy', document.baseURI).href);
+    expect(metaContent('meta[property="og:url"]'))
+      .toBe(new URL('privacy-policy', document.baseURI).href);
+
+    routerStub.url = '/terms';
+    routerEvents.next(new NavigationEnd(2, '/terms', '/terms'));
+    expect(linkHref('link[rel="canonical"]'))
+      .toBe(new URL('terms', document.baseURI).href);
+    TestBed.resetTestingModule();
+    routerEvents.next(new NavigationEnd(3, '/', '/'));
+    expect(linkHref('link[rel="canonical"]'))
+      .toBe(new URL('terms', document.baseURI).href);
   });
 
   afterEach(() => {

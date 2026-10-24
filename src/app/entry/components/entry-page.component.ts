@@ -1,14 +1,12 @@
 import { GUIDE_CONTEXT } from '@fssrepository/myscoutee-components';
 import { ExplanationGuideService } from '../../shared/core/base/services/help/explanation-guide.service';
-import { ProfileEditorHostComponent } from '../../shared/ui/components/profile-editor-host/profile-editor-host.component';
 import { preloadAdapterMode } from '../../shared/core/base/adapter-loaders';
 import { AppSetupStore } from '../../shared/ui/context/stores/app/app-setup.store';
 import { UserProfileStore } from '../../shared/ui/context/stores/profile/user-profile.store';
-import { ProfileEditorStore } from '../../shared/ui/context/stores/profile/profile-editor.store';
 import { NgComponentOutlet } from '@angular/common';
 import { AppLocationService } from '../../shared/core/base/services/accounts/app-location.service';
 import type { UserDto } from '../../shared/core/contracts/accounts/user.interface';
-import { Component, DestroyRef, ErrorHandler, OnInit, OnDestroy, ViewContainerRef, computed, effect, inject, inputBinding, outputBinding, signal, untracked, viewChild, type Type, ChangeDetectionStrategy } from '@angular/core';
+import { Component, DestroyRef, ErrorHandler, Injector, OnInit, OnDestroy, ViewContainerRef, computed, effect, inject, inputBinding, outputBinding, signal, untracked, viewChild, type Type, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DeploymentBrandComponent, IndicatorComponent, PopupComponent, I18nPipe, DialogStore, AppMenuComponent, type AppMenuItem } from '@fssrepository/myscoutee-components';
 import { MatIconModule } from '@angular/material/icon';
@@ -36,7 +34,7 @@ import { DemoBootstrapSelectorStore } from '../../shared/ui/context/stores/app/d
 
 @Component({
   selector: 'app-entry-page', standalone: true,
-  imports: [ProfileEditorHostComponent, DeploymentBrandComponent, AppMenuComponent, MatIconModule, MatRippleModule, NgComponentOutlet, IndicatorComponent, PopupComponent, I18nPipe, ExplanationLauncherComponent, LandingGuideSurfaceDirective],
+  imports: [DeploymentBrandComponent, AppMenuComponent, MatIconModule, MatRippleModule, NgComponentOutlet, IndicatorComponent, PopupComponent, I18nPipe, ExplanationLauncherComponent, LandingGuideSurfaceDirective],
   providers: [{ provide: GUIDE_CONTEXT, useExisting: ExplanationGuideService }, { provide: ExplanationGuideService, useExisting: LANDING_EXPLANATION_GUIDE }],
   templateUrl: './entry-page.component.html', changeDetection: ChangeDetectionStrategy.Eager,
  styleUrl: './entry-page.component.scss'
@@ -45,11 +43,13 @@ export class EntryPageComponent implements OnInit, OnDestroy {
   private readonly popupAdapters = inject(PopupAdapterProxyService);
   private readonly popupErrors = inject(ErrorHandler);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly injector = inject(Injector);
   private readonly privacyDocumentHost = viewChild('privacyDocumentHost', { read: ViewContainerRef });
   private readonly authPopupHost = viewChild('authPopupHost', { read: ViewContainerRef });
   protected readonly setupPopupComponent = signal<Type<unknown> | null>(null);
   protected readonly documentViewerComponent = signal<Type<DocumentViewerComponent> | null>(null);
   protected readonly authPopupComponent = signal<Type<EntryFirebaseAuthPopupComponent> | null>(null);
+  protected readonly profileEditorHostComponent = signal<Type<unknown> | null>(null);
   protected readonly deployment = inject(DeploymentConfigurationService);
   protected readonly pwa = inject(PwaService);
   protected readonly session = inject(SessionService);
@@ -64,7 +64,6 @@ export class EntryPageComponent implements OnInit, OnDestroy {
     layout: 'action', palette: 'brand', disabled: this.busy()
   }]);
   protected readonly setup = inject(AppSetupStore);
-  protected readonly editor = inject(ProfileEditorStore);
   private readonly location = inject(AppLocationService);
   private readonly profiles = inject(UserProfileStore);
   private readonly dialogs = inject(DialogStore);
@@ -296,8 +295,14 @@ export class EntryPageComponent implements OnInit, OnDestroy {
     }
     if (!user.admin && !user.operator && !await this.ensureLocationAllowed(user)) return false;
     if (user.profileStatus === 'onboarding') {
+      const [{ ProfileEditorStore }, module] = await Promise.all([
+        import('../../shared/ui/context/stores/profile/profile-editor.store'),
+        this.popupAdapters.load(POPUP_ADAPTER.PROFILE_EDITOR_HOST)
+      ]);
+      if (this.destroyRef.destroyed) return false;
       this.profiles.setActiveUserProfile(user);
-      this.editor.begin({ onSaved: saved => this.enterWorkspace(saved).then(() => undefined), onCancel: () => this.cancelEntry() });
+      this.profileEditorHostComponent.set(module.ProfileEditorHostComponent);
+      this.injector.get(ProfileEditorStore).begin({ onSaved: saved => this.enterWorkspace(saved).then(() => undefined), onCancel: () => this.cancelEntry() });
       return true;
     }
     return this.enterWorkspace(user);

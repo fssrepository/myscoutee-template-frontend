@@ -39,4 +39,6 @@
     <app-indicator kind="load-ring" state="loading" />
   </app-popup>
 }
-<app-profile-editor-host />
+@if (profileEditorHostComponent(); as component) {
+  <ng-container *ngComponentOutlet="component" />
+}

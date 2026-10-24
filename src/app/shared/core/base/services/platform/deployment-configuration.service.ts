@@ -2,6 +2,8 @@ import { HTTP_ADAPTER, LOCAL_ADAPTER } from '../../adapter-loaders';
 import { AdapterProxyService } from './adapter-proxy.service';
 import { DOCUMENT } from '@angular/common';
 import { Injectable, OnDestroy, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router } from '@angular/router';
 
 import { type UiBranding as DeploymentBrandingDto } from '@fssrepository/myscoutee-components';
 import { DEFAULT_DEPLOYMENT_BRANDING, DEFAULT_DEPLOYMENT_PRIVACY_CONTACT, DEFAULT_DEPLOYMENT_SOCIAL_LINKS, type DeploymentConfigurationDto, type DeploymentPrivacyContactDto, type DeploymentConfigurationServiceContract, type DeploymentSocialLinkDto } from '../../../contracts/platform/deployment-configuration.interface';
@@ -19,6 +21,7 @@ export class DeploymentConfigurationService
   private readonly transportAdapters = inject(AdapterProxyService);
 
   private readonly documentRef = inject(DOCUMENT);
+  private readonly router = inject(Router);
   private readonly localService = this.transportAdapters.reference(LOCAL_ADAPTER.DEPLOYMENT_CONFIGURATION);
   private readonly httpService = this.transportAdapters.reference(HTTP_ADAPTER.DEPLOYMENT_CONFIGURATION);
   private readonly brandingRef = signal<DeploymentBrandingDto>(
@@ -40,6 +43,16 @@ export class DeploymentConfigurationService
   readonly privacyContact = this.privacyContactRef.asReadonly();
   readonly firebaseMessagingConfigured = this.firebaseMessagingConfiguredRef.asReadonly();
   readonly loading = this.loadingRef.asReadonly();
+
+  constructor() {
+    super();
+    this.applyDocumentUrl(this.router.url);
+    this.router.events.pipe(takeUntilDestroyed()).subscribe(event => {
+      if (event instanceof NavigationEnd) {
+        this.applyDocumentUrl(event.urlAfterRedirects);
+      }
+    });
+  }
 
   ngOnDestroy(): void {
     this.revokeManifestObjectUrl();
@@ -174,9 +187,7 @@ export class DeploymentConfigurationService
     this.setMetaContent('meta[property="og:title"]', branding.productName);
     this.setMetaContent('meta[property="og:site_name"]', branding.productName);
     this.setMetaContent('meta[property="og:description"]', branding.homeLabel);
-    const canonicalUrl = this.deploymentRootUrl();
-    this.setMetaContent('meta[property="og:url"]', canonicalUrl);
-    this.setLinkHref('link[rel="canonical"]', canonicalUrl);
+    this.applyDocumentUrl(this.router.url);
     const metadataLogoUrl = this.absoluteLogoUrl(branding.logoUrl);
     const logoMediaType = this.logoMediaType(branding.logoUrl);
     this.setMetaContent('meta[property="og:image"]', metadataLogoUrl);
@@ -357,12 +368,12 @@ export class DeploymentConfigurationService
     }
   }
 
-  private deploymentRootUrl(): string {
-    try {
-      return new URL('/', this.documentRef.baseURI).toString();
-    } catch {
-      return this.documentRef.baseURI;
-    }
+  private applyDocumentUrl(routeUrl: string): void {
+    const url = new URL(routeUrl.replace(/^\//, ''), this.documentRef.baseURI);
+    url.search = '';
+    url.hash = '';
+    this.setMetaContent('meta[property="og:url"]', url.href);
+    this.setLinkHref('link[rel="canonical"]', url.href);
   }
 
   private logoMediaType(logoUrl: string): string {

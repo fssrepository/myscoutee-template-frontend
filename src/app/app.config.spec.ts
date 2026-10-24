@@ -1,3 +1,5 @@
+import { HttpClient } from '@angular/common/http';
+import { routes } from './app.routes';
 import { TestBed } from '@angular/core/testing';
 import { environment } from '../environments/environment';
 import { ROUTE_CONFIG } from './shared/core/base/config';
@@ -49,5 +51,22 @@ describe('template bootstrap adapter loading', () => {
     await loadAppConfig();
     expect(ADAPTER_MODE_LOADERS.local).toHaveBeenCalledExactlyOnceWith();
     expect(ADAPTER_MODE_LOADERS.http).not.toHaveBeenCalled();
+  });
+});
+
+describe('Public application bootstrap', () => {
+  afterEach(() => TestBed.resetTestingModule());
+
+  it('provides the HTTP client required by entry-page startup services', () => {
+    TestBed.configureTestingModule({ providers: appConfig.providers });
+    expect(TestBed.inject(HttpClient)).toBeInstanceOf(HttpClient);
+  });
+
+  it('loads the actual entry page through its public route', async () => {
+    const entry = routes.find(route => route.path === 'entry');
+    expect(entry?.loadComponent).toBeTypeOf('function');
+    const component = await (entry!.loadComponent!() as Promise<unknown>);
+    expect((component as { ɵcmp: { selectors: string[][] } }).ɵcmp.selectors)
+      .toContainEqual(['app-entry-page']);
   });
 });

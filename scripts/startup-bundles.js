@@ -106,9 +106,9 @@ async function consolidateStartupBundles(outputDir, { localAdaptersInStartup = f
           // keep transport constructors independent of the controls they serve.
           for (const [phase, roots] of [
             ['entry-popups', [
-              findEntry('src/app/shared/ui/components/explanation-popup/explanation-popup.component.ts')
+              ...Object.entries(metadata.outputs).filter(([, info]) => /components-core-tour-dialog\.component-/.test(info.entryPoint ?? '')).map(([name]) => outputFile(name))
             ].filter(Boolean)],
-            ['public-dialogs', popupModuleGroups.publicDialogs.map(findEntry).filter(Boolean)],
+            ['public-dialogs', [...popupModuleGroups.publicDialogs.map(findEntry), ...Object.entries(metadata.outputs).filter(([, info]) => /components-core-explanation-dialog\.component-/.test(info.entryPoint ?? '')).map(([name]) => outputFile(name))].filter(Boolean)],
             ['workspace-adapters', localAdaptersInStartup ? [] : [findEntry(workspaceAdapters)].filter(Boolean)],
             ['member-controls', controls]
           ]) {

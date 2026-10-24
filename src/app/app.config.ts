@@ -16,6 +16,11 @@ export const appConfig: ApplicationConfig={
   providers: [
     provideAppInitializer(() => Promise.all([inject(I18nService).initialize(), inject(SessionService).ensureSession()])),
     ...SHARED_UI_PROVIDERS,provideBrowserGlobalErrorListeners(),provideRouter(routes),
+    provideHttpClient(withXhr(), withInterceptors([
+      connectivityInterceptor,
+      sessionModeInterceptor,
+      sessionAuthInterceptor
+    ])),
   ]
 };
 

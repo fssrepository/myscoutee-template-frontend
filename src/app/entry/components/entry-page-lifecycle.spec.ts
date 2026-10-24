@@ -13,8 +13,10 @@ describe('entry account lifecycle', () => {
    selector:{closeDemoBootstrapSelector:vi.fn()},profiles:{setActiveUserId:vi.fn(),setActiveUserProfile:vi.fn()},
    privacy:{activeRevision:()=>({id:'privacy',version:1}),loadConsent:vi.fn().mockResolvedValue({revisionId:'privacy',revisionVersion:1})},
    dialogs:{open:vi.fn()},i18n:{translateParams:()=> 'Restore your account'},deployment:{branding:()=>({productName:'Templates'})},
-   editor:{begin:vi.fn()},router:{navigateByUrl:vi.fn().mockResolvedValue(true)},error:signal('')
+   editor:{begin:vi.fn()},destroyRef:{destroyed:false},profileEditorHostComponent:signal(null),
+   popupAdapters:{load:vi.fn().mockResolvedValue({ProfileEditorHostComponent:class {}})},injector:{get:vi.fn()},router:{navigateByUrl:vi.fn().mockResolvedValue(true)},error:signal('')
   });
+  context.injector.get.mockReturnValue(context.editor);
   return {context,user};
  }
  it('waits for confirmation, restores the previous status and keeps the same account',async()=>{

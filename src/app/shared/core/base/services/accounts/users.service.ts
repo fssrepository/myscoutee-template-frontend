@@ -39,7 +39,12 @@ export class UsersService extends BaseRouteModeService {
  }
  get localModeEnabled(): boolean { return this.isLocalRouteEnabled('/auth/me'); }
  loadAvailableDemoUsers(role: UserSelectorRole = 'member') { return this.resolveRouteService('/auth/demo-users', this.local, this.http).queryAvailableDemoUsers(role); }
- checkLocationEligibility(coordinates?: LocationCoordinates | null) { return this.userService.checkLocationEligibility(coordinates); }
+ async checkLocationEligibility(coordinates?: LocationCoordinates | null) {
+   const service = this.isLocalRouteEnabled('/auth/me')
+     ? this.local
+     : await this.transportAdapters.get(HTTP_ADAPTER.USERS);
+   return service.checkLocationEligibility(coordinates);
+ }
  private get userService() { return this.resolveRouteService('/auth/me', this.local, this.http); }
  async loadUserById(userId?: string): Promise<UserDto | null> {
   const session = this.sessionService.identity();
