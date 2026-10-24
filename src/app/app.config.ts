@@ -2,6 +2,7 @@ import { SessionService } from './shared/core/base/services/accounts/session.ser
 import { sessionAuthInterceptor } from './shared/core/http/interceptors/accounts/session-auth.interceptor';
 import { anonymousLanding } from './shared/core/common/demo-failover';
 import { I18nService } from './shared/core/base/services/localization/i18n.service';
+import { DeploymentConfigurationService } from './shared/core/base/services/platform/deployment-configuration.service';
 import { connectivityInterceptor } from './shared/core/http/interceptors/platform/connectivity.interceptor';
 import { ApplicationConfig, inject, provideAppInitializer, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { provideHttpClient, withInterceptors, withXhr } from '@angular/common/http';
@@ -14,7 +15,7 @@ import { ROUTE_CONFIG } from './shared/core/base/config';
 import { preloadAdapterMode, type AdapterMode } from './shared/core/base/adapter-loaders';
 export const appConfig: ApplicationConfig={
   providers: [
-    provideAppInitializer(() => Promise.all([inject(I18nService).initialize(), inject(SessionService).ensureSession()])),
+    provideAppInitializer(initializeApplication),
     ...SHARED_UI_PROVIDERS,provideBrowserGlobalErrorListeners(),provideRouter(routes),
     provideHttpClient(withXhr(), withInterceptors([
       connectivityInterceptor,
@@ -23,6 +24,14 @@ export const appConfig: ApplicationConfig={
     ])),
   ]
 };
+
+export function initializeApplication(): Promise<void> {
+  const translations = inject(I18nService).initialize();
+  void inject(DeploymentConfigurationService).initialize().catch(() => {
+    // The root component observes the same load and reports initialization errors.
+  });
+  return Promise.all([translations, inject(SessionService).ensureSession()]).then(() => undefined);
+}
 
 export async function loadAppConfig(): Promise<ApplicationConfig> {
   const modes = new Set<AdapterMode>([environment.activitiesDataSource]);
