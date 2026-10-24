@@ -194,7 +194,10 @@ export class DeploymentConfigurationService
     );
     this.setLinkHref('link[rel~="icon"]', branding.logoUrl);
     this.setLinkType('link[rel~="icon"]', logoMediaType);
-    this.setLinkHref('link[rel="apple-touch-icon"]', branding.logoUrl);
+    this.setLinkHref('link[rel="apple-touch-icon"]',
+      metadataLogoUrl === this.absoluteLogoUrl('assets/logo/heart.webp')
+        ? 'assets/icon/apple-touch-icon.png'
+        : branding.logoUrl);
     const deploymentThemeColor =
       this.documentRef.defaultView
         ?.getComputedStyle(documentElement)
@@ -248,9 +251,9 @@ export class DeploymentConfigurationService
       // custom logos without claiming dimensions or a maskable-safe layout.
       icons: usesBundledLogo
         ? [192, 512].map(size => ({
-            src: this.absoluteLogoUrl(`assets/icon/android-chrome-${size}x${size}.png`),
+            src: this.absoluteLogoUrl(`assets/icon/android-chrome-${size}x${size}.webp`),
             sizes: `${size}x${size}`,
-            type: 'image/png',
+            type: 'image/webp',
             purpose: 'any maskable'
           }))
         : logoUrl

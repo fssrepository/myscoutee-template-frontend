@@ -139,11 +139,14 @@ describe('DeploymentConfigurationService', () => {
 
     service.applyBranding({ ...DEFAULT_DEPLOYMENT_BRANDING, productName: 'MyScoutee', logoUrl: 'assets/logo/heart.webp' });
 
+    expect(linkHref('link[rel="apple-touch-icon"]'))
+      .toBe('assets/icon/apple-touch-icon.png');
+
     const manifest = JSON.parse(await readBlob(createObjectUrl.mock.calls[0][0]));
     expect(manifest.icons).toEqual([192, 512].map(size => ({
-      src: new URL(`assets/icon/android-chrome-${size}x${size}.png`, document.baseURI).toString(),
+      src: new URL(`assets/icon/android-chrome-${size}x${size}.webp`, document.baseURI).toString(),
       sizes: `${size}x${size}`,
-      type: 'image/png',
+      type: 'image/webp',
       purpose: 'any maskable'
     })));
   });
