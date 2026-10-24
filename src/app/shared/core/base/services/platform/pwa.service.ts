@@ -1,6 +1,7 @@
 import { Injectable, Injector, computed, inject, signal } from '@angular/core';
 
 import { environment } from '../../../../../../environments/environment';
+import { version as packageVersion } from '../../../../../../../package.json';
 import { APP_CACHE_KEYS, APP_STORAGE_KEYS } from '../../../common/storage-scope';
 import { pwaNotificationRegistrationEnabled } from '../../../common/pwa-runtime-policy';
 
@@ -16,8 +17,6 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 interface AppVersionPayload {
-  version?: unknown;
-  gitSha?: unknown;
   buildId?: unknown;
 }
 
@@ -28,10 +27,12 @@ export class PwaService {
   private static readonly INSTALL_DISMISSED_STORAGE_KEY = APP_STORAGE_KEYS.pwaInstallPromptDismissed;
   private static readonly UPDATE_RELOAD_ATTEMPT_STORAGE_KEY = APP_STORAGE_KEYS.pwaUpdateReloadAttempt;
   private static readonly BUILD_ID_META_NAME = 'myscoutee-build-id';
+  private static readonly APP_VERSION_META_NAME = 'myscoutee-app-version';
   private static readonly APP_VERSION_URL = 'app-version.json';
   private static readonly CACHE_PREFIX = APP_CACHE_KEYS.runtimePrefix;
   private static readonly WORKER_INSTALL_TIMEOUT_MS = 10_000;
   private static readonly WORKER_ACTIVATION_TIMEOUT_MS = 4_000;
+  private static readonly WORKER_BUILD_ID_TIMEOUT_MS = 1_000;
 
   private readonly injector = inject(Injector);
   private readonly installPromptRef = signal<BeforeInstallPromptEvent | null>(null);
@@ -79,7 +80,7 @@ export class PwaService {
       return;
     }
     this.initialized = true;
-    void this.loadAppVersionLabel();
+    this.loadAppVersionLabel();
     window.addEventListener('beforeinstallprompt', this.onBeforeInstallPrompt);
     window.addEventListener('appinstalled', this.onAppInstalled);
 
@@ -93,27 +94,12 @@ export class PwaService {
     }
   }
 
-  private async loadAppVersionLabel(): Promise<void> {
-    if (typeof fetch !== 'function' || typeof document === 'undefined') {
-      return;
-    }
-    try {
-      const response = await fetch(new URL(PwaService.APP_VERSION_URL, document.baseURI).toString(), {
-        cache: 'no-store'
-      });
-      if (!response.ok) {
-        return;
-      }
-      const payload = await response.json() as AppVersionPayload;
-      const version = this.normalizeAppVersion(payload.version)
-        || this.normalizeAppVersion(payload.buildId)
-        || this.normalizeAppVersion(payload.gitSha);
-      if (version) {
-        this.appVersionLabelRef.set(version.startsWith('v') ? version : `v${version}`);
-      }
-    } catch {
-      // The local dev server may not have a stamped version file yet.
-    }
+  private loadAppVersionLabel(): void {
+    const meta = typeof document === 'undefined' ? null
+      : document.querySelector<HTMLMetaElement>(`meta[name="${PwaService.APP_VERSION_META_NAME}"]`);
+    const version = this.normalizeAppVersion(meta?.content)
+      || this.normalizeAppVersion(packageVersion);
+    this.appVersionLabelRef.set(version.startsWith('v') ? version : `v${version}`);
   }
 
   private normalizeAppVersion(value: unknown): string {
@@ -285,27 +271,29 @@ export class PwaService {
   }
 
   private async checkForBundleUpdate(registration: ServiceWorkerRegistration): Promise<void> {
-
     const currentBuildId = this.readDocumentBuildId();
+    await registration.update().catch(() => undefined);
     if (!currentBuildId) {
-      await registration.update().catch(() => undefined);
       return;
     }
 
-    const latestBuildId = await this.fetchLatestBuildId();
+    const waitingWorker = await this.waitForWaitingWorker(registration);
+    if (!waitingWorker) {
+      this.clearReloadAttempt();
+      return;
+    }
+
+    // The stamped worker already knows its release. Only workers from older
+    // releases need the existing metadata endpoint during an update/rollback.
+    const latestBuildId = await this.readWorkerBuildId(waitingWorker)
+      || await this.fetchLatestBuildId();
     if (!latestBuildId) {
       this.clearReloadAttempt();
-      await registration.update().catch(() => undefined);
       return;
     }
-
     if (latestBuildId === currentBuildId) {
       this.clearReloadAttempt();
-      await registration.update().catch(() => undefined);
-      const waitingWorker = await this.waitForWaitingWorker(registration);
-      if (waitingWorker) {
-        await this.activateWaitingWorker(waitingWorker);
-      }
+      await this.activateWaitingWorker(waitingWorker);
       return;
     }
 
@@ -314,15 +302,31 @@ export class PwaService {
       return;
     }
 
-    await registration.update().catch(() => undefined);
-    const waitingWorker = await this.waitForWaitingWorker(registration);
-    if (!waitingWorker) {
-      return;
-    }
-
     this.markReloadAttempted(attemptKey);
     await this.activateWaitingWorker(waitingWorker);
     this.reloadPage();
+  }
+
+  private async readWorkerBuildId(worker: ServiceWorker): Promise<string> {
+    if (typeof MessageChannel === 'undefined') {
+      return '';
+    }
+    return new Promise(resolve => {
+      const channel = new MessageChannel();
+      const finish = (buildId: string) => {
+        clearTimeout(timeout);
+        channel.port1.close();
+        channel.port2.close();
+        resolve(buildId);
+      };
+      const timeout = window.setTimeout(() => finish(''), PwaService.WORKER_BUILD_ID_TIMEOUT_MS);
+      channel.port1.onmessage = event => finish(this.normalizeBuildId(event.data?.buildId));
+      try {
+        worker.postMessage({ type: 'GET_BUILD_ID' }, [channel.port2]);
+      } catch {
+        finish('');
+      }
+    });
   }
 
   /** Called only after an update or rollback has completed, never when loading job history. */
@@ -421,13 +425,9 @@ export class PwaService {
       const versionUrl = new URL(PwaService.APP_VERSION_URL, document.baseURI).toString();
       const response = await fetch(versionUrl, {
         cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache'
-        }
+        headers: { 'Cache-Control': 'no-cache' }
       });
-      if (!response.ok) {
-        return '';
-      }
+      if (!response.ok) return '';
       const payload = await response.json() as AppVersionPayload;
       return this.normalizeBuildId(payload.buildId);
     } catch {

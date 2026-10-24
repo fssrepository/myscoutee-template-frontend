@@ -1,5 +1,6 @@
 const CACHE_PREFIX = 'myscoutee-template-runtime';
 const CACHE_VERSION = 'v1';
+const BUILD_ID = '';
 const APP_CACHE = `${CACHE_PREFIX}-app-${CACHE_VERSION}`;
 const API_CACHE = `${CACHE_PREFIX}-api-${CACHE_VERSION}`;
 const MEDIA_CACHE = `${CACHE_PREFIX}-media-${CACHE_VERSION}`;
@@ -74,6 +75,10 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('message', event => {
   if (event.origin !== self.location.origin) return;
+  if (event.data?.type === 'GET_BUILD_ID') {
+    event.ports?.[0]?.postMessage({ buildId: BUILD_ID });
+    return;
+  }
   if (event.data && event.data.type === 'SKIP_WAITING') {
     event.waitUntil(self.skipWaiting());
     return;

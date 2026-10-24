@@ -293,6 +293,17 @@ describe('I18nService', () => {
     });
   });
 
+  it('resolves source text aliases in explicit language translations', () => {
+    const service = TestBed.inject(I18nService);
+    (service as any).applySourceBundle({ 'action.save': 'Save changes' });
+    (service as any).applyBundle('hu', 'test', { 'action.save': 'Módosítások mentése' });
+
+    expect(service.translateForLanguage(' Save   changes ', 'hu')).toBe('Módosítások mentése');
+    expect(service.translateForLanguage('Save changes', 'en')).toBe('Save changes');
+    expect(service.translateForLanguage('action.save', 'hu')).toBe('Módosítások mentése');
+    expect(service.translateForLanguage('Unknown label', 'hu', 'Fallback')).toBe('Fallback');
+  });
+
   it('translates composite labels from the English source bundle', async () => {
     get.mockImplementation((url: string) => {
       const bundle = {

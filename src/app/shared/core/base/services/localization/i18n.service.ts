@@ -214,7 +214,8 @@ export class I18nService implements UiTranslations {
       : lang === this.currentLanguageSignal()
         ? this.messagesSignal()
         : this.messagesByLanguageSignal()[lang] ?? {};
-    return messages[key] ?? `${fallback ?? key}`;
+    const sourceKey = this.sourceKeyByTextSignal()[this.normalizeSourceKey(key)];
+    return messages[key] ?? (sourceKey ? messages[sourceKey] : undefined) ?? `${fallback ?? key}`;
   }
 
   revalidate(): Promise<void> {

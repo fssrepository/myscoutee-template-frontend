@@ -252,9 +252,9 @@ export class EntryPageComponent implements OnInit, OnDestroy {
       mode: mode === 'operator' ? 'operator' : 'member',
       selectableModes: mode === 'operator' ? ['operator'] : ['member', 'admin', 'operator'],
       onSelect: async (userId) => {
-        const session = this.localMode ? this.session.startDemoSession(userId) : await this.session.startTrackedDemoSession(userId);
-        if (!session) return this.i18n.translate(this.session.authNotice() || 'demo.session.open.error');
         try {
+          const session = this.localMode ? this.session.startDemoSession(userId) : await this.session.startTrackedDemoSession(userId);
+          if (!session) return this.i18n.translate(this.session.authNotice() || 'demo.session.open.error');
           return await this.finishEntry();
         }
         catch { this.error.set('entry.user.open.error'); return false; }
