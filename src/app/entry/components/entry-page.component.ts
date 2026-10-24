@@ -23,7 +23,7 @@ import type { DocumentViewerActionEvent, DocumentViewerConfig } from '../../shar
 import type { FirebaseAuthRequestDto, EntryConsentStateDto, EntryConsentAuditRecordDto } from '../../shared/core/contracts/accounts/user.interface';
 import { SessionService } from '../../shared/core/base/services/accounts/session.service';
 import { FirebaseAppService } from '../../shared/core/base/services/accounts/firebase-app.service';
-import { UsersService } from '../../shared/core/base/services/accounts/users.service';
+import type { UsersService } from '../../shared/core/base/services/accounts/users.service';
 import { PrivacyPolicyService } from '../../shared/core/base/services/help/privacy-policy.service';
 import { DeploymentConfigurationService } from '../../shared/core/base/services/platform/deployment-configuration.service';
 import { PwaService } from '../../shared/core/base/services/platform/pwa.service';
@@ -68,7 +68,7 @@ export class EntryPageComponent implements OnInit, OnDestroy {
   private readonly profiles = inject(UserProfileStore);
   private readonly dialogs = inject(DialogStore);
   private readonly firebase = inject(FirebaseAppService);
-  private readonly users = inject(UsersService);
+  private users: UsersService | undefined;
   private readonly selector = inject(DemoBootstrapSelectorStore);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -262,17 +262,24 @@ export class EntryPageComponent implements OnInit, OnDestroy {
     });
   }
 
+  private async loadUsersService(): Promise<UsersService> {
+    if (this.users) return this.users;
+    const { UsersService } = await import('../../shared/core/base/services/accounts/users.service');
+    return this.users ??= this.injector.get(UsersService);
+  }
+
   private async finishEntry(): Promise<boolean> {
     const session = this.session.currentSession();
     if (!session) return false;
     if (session.kind === 'authenticated') return this.router.navigateByUrl('/operator');
+    const users = await this.loadUsersService();
     const cachedUser = this.localMode && session.kind === 'demo'
-      ? this.users.peekCachedUserById(session.userId) : null;
+      ? users.peekCachedUserById(session.userId) : null;
     const localWorkspaceUser = cachedUser
       && ['/home', '/admin', '/operator'].includes(this.workspaceDestination(cachedUser).split(/[?#]/, 1)[0]);
     // Use the prepared local profile for entry gates. Every workspace loads
     // the profile through the same avatar indicator after navigation.
-    let user = localWorkspaceUser ? cachedUser : await this.users.loadUserById(session.kind === 'demo' ? session.userId : undefined);
+    let user = localWorkspaceUser ? cachedUser : await users.loadUserById(session.kind === 'demo' ? session.userId : undefined);
     if (!user) throw new Error('User not found.');
     // Account consent belongs to the destination in the native entry flow.
     // MCP authorization has no member shell, so it retains its entry check.
@@ -326,12 +333,13 @@ export class EntryPageComponent implements OnInit, OnDestroy {
   }
 
   private async ensureLocationAllowed(user: UserDto): Promise<boolean> {
-    const eligibility = await this.users.checkLocationEligibility(user.locationCoordinates);
+    const users = await this.loadUsersService();
+    const eligibility = await users.checkLocationEligibility(user.locationCoordinates);
     if (eligibility.eligible) return true;
     if (!eligibility.locationRequired) throw new Error(eligibility.message || 'Unavailable in your country');
     const identity = this.session.identity();
     const allowed = await this.setup.requestForLogin(async coordinates => {
-      const result = await this.users.checkLocationEligibility(coordinates);
+      const result = await users.checkLocationEligibility(coordinates);
       if (!result.eligible) throw new Error(result.message || 'Unavailable in your country');
       if (identity !== this.session.identity()) return false;
       return this.location.saveCurrentCoordinates(coordinates);
@@ -357,7 +365,7 @@ export class EntryPageComponent implements OnInit, OnDestroy {
         onConfirm: async () => {
           const previous = user.previousProfileStatus;
           const profileStatus = previous && ['blocked', 'friends only', 'host only', 'inactive', 'public'].includes(previous) ? previous : 'public';
-          const saved = await this.users.saveUserProfile({ ...user, profileStatus, previousProfileStatus: null, deletedAtIso: null });
+          const saved = await (await this.loadUsersService()).saveUserProfile({ ...user, profileStatus, previousProfileStatus: null, deletedAtIso: null });
           if (!saved) throw new Error('Unable to reactivate account.');
           resolve(saved);
         }
