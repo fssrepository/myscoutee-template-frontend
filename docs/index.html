@@ -1,20 +1,24 @@
-<!doctype html>
-<html lang="en" data-beasties-container>
-<head>
+<!DOCTYPE html><html lang="en" data-beasties-container=""><head>
   <meta charset="utf-8">
+  <script id="myscoutee-consent-auto" type="application/json"><!--# echo var="myscoutee_consent_auto" default="1" --></script>
+  <script id="myscoutee-landing-debug" type="application/json"><!--# echo var="myscoutee_landing_debug" default="0" --></script>
+  <script id="myscoutee-landing-debug-context" type="application/json">[<!--# echo var="myscoutee_landing_purpose" default="0" -->,<!--# echo var="myscoutee_landing_user" default="0" -->]</script>
+  <!--# if expr="$myscoutee_landing_debug = 1" -->
+  
+  <!--# endif -->
   <script id="myscoutee-runtime-status" type="application/json"><!--# include virtual="/api/runtime-status" --></script>
   <title>MyScoutee</title>
   <meta name="description" content="MyScoutee">
   <base href="/myscoutee-template-frontend/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#2d5f94">
-  <meta name="myscoutee-build-id" content="1.4.5">
+  <meta name="myscoutee-build-id" content="efd3dd85d1b7-20261024015631">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="icon" type="image/x-icon" href="assets/icon/favicon.ico">
   <link rel="apple-touch-icon" href="assets/icon/apple-touch-icon.png">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="preload" href="assets/fonts/unifrakturmaguntia/UnifrakturMaguntia-Book.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="preload" href="assets/fonts/unifrakturmaguntia/UnifrakturMaguntia-Book.ttf" as="font" type="font/ttf" crossorigin="">
   <style>
     @font-face {
       font-family: 'UnifrakturMaguntia';
@@ -425,12 +429,13 @@
     <section class="app-warmup-fallback" role="status" aria-live="polite" aria-label="Loading MyScoutee">
       <span class="app-warmup-fallback-mark">
         <span class="app-warmup-fallback-ring" aria-hidden="true"></span>
-        <img src="assets/logo/heart.webp" alt>
+        <img src="assets/logo/heart.webp" alt="">
       </span>
-      <span class="app-warmup-fallback-label" data-warmup-label>MyScoutee</span>
-      <span class="app-warmup-fallback-status" data-warmup-status></span>
-      <button class="app-warmup-fallback-retry" type="button" data-warmup-retry hidden>Retry</button>
+      <span class="app-warmup-fallback-label" data-warmup-label="">MyScoutee</span>
+      <span class="app-warmup-fallback-status" data-warmup-status=""></span>
+      <button class="app-warmup-fallback-retry" type="button" data-warmup-retry="" hidden="">Retry</button>
     </section>
   </app-root>
-<link rel="modulepreload" href="chunk-66ae0f6e.js"><script src="main-8d94eb2e.js" type="module"></script></body>
-</html>
+<link rel="modulepreload" href="chunk-efe68b62.js"><script src="main-a8660dba.js" type="module"></script>
+
+</body></html>

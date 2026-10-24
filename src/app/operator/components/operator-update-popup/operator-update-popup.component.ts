@@ -1,3 +1,4 @@
+import { OnInit } from '@angular/core';
 import {Component,ChangeDetectionStrategy,computed,inject,output} from '@angular/core';
 import {MatIconModule} from '@angular/material/icon';
 import {IndicatorComponent,AppMenuComponent,type AppMenuItem,type AppMenuItemSelectEvent,PopupComponent,type PopupModel,I18nPipe} from '@fssrepository/myscoutee-components';
@@ -7,7 +8,7 @@ import {I18nService} from '../../../shared/core/base/services/localization/i18n.
 interface OperatorPopupActionContext {action:'refresh-update'|'apply-update'|'rollback-update';}
 @Component({selector:'app-operator-update-popup',standalone:true,imports:[IndicatorComponent,MatIconModule,AppMenuComponent,PopupComponent,I18nPipe],
  templateUrl:'./operator-update-popup.component.html',styleUrl:'./operator-update-popup.component.scss',changeDetection:ChangeDetectionStrategy.OnPush})
-export class OperatorUpdatePopupComponent {
+export class OperatorUpdatePopupComponent implements OnInit {
  readonly closed=output<void>();
  protected readonly workspace=inject(OperatorWorkspaceStore);
  private readonly i18n=inject(I18nService);

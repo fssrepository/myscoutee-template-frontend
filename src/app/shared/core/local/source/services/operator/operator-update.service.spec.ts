@@ -8,6 +8,7 @@ import {LocalDeploymentConfigurationRepository} from '../../repositories/platfor
 import {SeedOperatorConfigurationRepository} from '../../../seed/repositories/operator/operator-configuration-seed.repository';
 import {LocalOperatorUpdateService} from './operator-update.service';
 import {LocalRoleNotificationsService} from '../notifications/role-notifications.service';
+import version from '../../../../../../../app-version.json';
 function fixture(){
  let persisted:OperatorDeploymentStateRecord|null=null;
  const db={whenReady:vi.fn().mockResolvedValue(undefined),readIndexedDbTableEntry:vi.fn(async()=>structuredClone(persisted)),
@@ -19,11 +20,11 @@ function fixture(){
  return {injector,db,publish,repo:injector.get(LocalDeploymentConfigurationRepository),seed:injector.get(SeedOperatorConfigurationRepository),service:injector.get(LocalOperatorUpdateService)};
 }
 describe('Local deployment updates',()=>{
- it('starts at 1.0.0 without announcing a fictitious release; seed upgrade preserves edited configuration',async()=>{
+ it('starts at the configured build version without announcing a fictitious release; seed upgrade preserves edited configuration',async()=>{
   const f=fixture();try{
    await f.seed.seedDefaults();const old=(await f.repo.read())!;old.configuration.branding.productName='Owned project';delete old.deploymentUpdate;
    await f.repo.write(old);await f.seed.seedDefaults();await f.seed.seedDefaults();
-   const update=await f.service.loadDeploymentUpdate();expect(update.currentVersion).toBe('1.0.0');expect(update.availableVersion).toBe('1.0.0');expect(update.updateAvailable).toBe(false);expect(f.publish).not.toHaveBeenCalled();
+   const update=await f.service.loadDeploymentUpdate();expect(update.currentVersion).toBe(version.version);expect(update.availableVersion).toBe(version.version);expect(update.updateAvailable).toBe(false);expect(f.publish).not.toHaveBeenCalled();
    expect((await f.repo.read())?.configuration.branding.productName).toBe('Owned project');expect(f.db.writeIndexedDbTableEntry).toHaveBeenCalledTimes(3);
   }finally{f.injector.destroy();}
  });

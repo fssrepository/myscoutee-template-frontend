@@ -43,6 +43,10 @@
               "src/app-version.json"
             ],
             "styles": [
+              "node_modules/@fontsource/roboto/300.css",
+              "node_modules/@fontsource/roboto/400.css",
+              "node_modules/@fontsource/roboto/500.css",
+              "node_modules/material-icons/iconfont/filled.css",
               "src/_styles/styles.scss"
             ],
             "statsJson": true
@@ -237,7 +241,10 @@
             "setupFiles": [
               "src/test-browser.ts"
             ],
-            "runnerConfig": "vitest.config.ts"
+            "runnerConfig": "vitest.config.ts",
+            "coverageInclude": ["src/**/*.ts"],
+            "coverageReporters": ["lcov", "text-summary"],
+            "reporters": ["default", ["vitest-sonar-reporter", {"outputFile": "test-results/sonar.xml"}]]
           }
         }
       }

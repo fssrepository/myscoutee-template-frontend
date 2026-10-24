@@ -1,3 +1,6 @@
+import type { HelpCenterRevisionDto as GuideRevision } from '../../shared/core/contracts/content/content.interface';
+import { ExplanationGuideService } from '../../shared/core/base/services/help/explanation-guide.service';
+import { ProfileEditorHostComponent } from '../../shared/ui/components/profile-editor-host/profile-editor-host.component';
 import { I18nService } from '../../shared/core/base/services/localization/i18n.service';
 import { AppRuntimeStore } from '../../shared/ui/context/stores/app/app-runtime.store';
 import { backendUnavailable } from '../../shared/core/common/backend-connectivity';
@@ -13,28 +16,28 @@ import { AppSetupPopupComponent } from '../../shared/ui/components/app-setup-pop
 import { ChatComponent } from './chat/chat.component';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ShowcaseComponent, SHOWCASE_VIEW_OPTIONS } from './showcase/showcase.component';
-import { Component, computed, effect, inject, signal, untracked, OnDestroy, HostListener } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked, OnDestroy, HostListener, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { AppMenuComponent, HeaderCardComponent, IndicatorComponent, I18nPipe, DialogStore, ExplanationGuideService, FloatingLauncherComponent, PopupComponent, UiTaskScheduler, UiPollCoordinator, PopupPresenceStore, type AppMenuTrigger, type AppMenuItem, type HeaderCardModel, type AppMenuModel, type PopupModel } from '@fssrepository/myscoutee-components';
+import { AppMenuComponent, HeaderCardComponent, I18nPipe, DialogStore, FloatingLauncherComponent, PopupComponent, UiTaskScheduler, UiPollCoordinator, PopupPresenceStore, type AppMenuTrigger, type AppMenuItem, type HeaderCardModel, type AppMenuModel, type PopupModel } from '@fssrepository/myscoutee-components';
 import { NotificationCenterStore } from '../../shared/ui/context/stores/notification/notification-center.store';
 import { NotificationCenterPopupComponent } from '../../shared/ui/components/notification-center-popup/notification-center-popup.component';
 import { ExplanationLauncherComponent } from '../../shared/ui/components/explanation-popup/explanation-launcher.component';
 import { HelpCenterService } from '../../shared/core/base/services/help/help-center.service';
 import { UsersService, USER_BY_ID_LOAD_CONTEXT_KEY } from '../../shared/core/base/services/accounts/users.service';
 import { PrivacyPolicyService } from '../../shared/core/base/services/help/privacy-policy.service';
-import type { GuideRevision } from '@fssrepository/myscoutee-components';
+
 import { ProfileStore } from '../../shared/ui/context/stores/profile/profile.store';
 import { ProfileSettingsPopupsComponent } from '../../profile/components/settings-popups/settings-popups.component';
 import { SessionService } from '../../shared/core/base/services/accounts/session.service';
 import { UserProfileStore } from '../../shared/ui/context/stores/profile/user-profile.store';
 import { ProfileEditorStore } from '../../shared/ui/context/stores/profile/profile-editor.store';
-import { NgComponentOutlet } from '@angular/common';
 
 @Component({
  selector: 'app-member-page', standalone: true,
  host: { '[attr.data-guide-surface]': "role === 'member' && page() === 'chat' ? 'chat' : 'home'" },
- imports: [OperatorPageComponent, HomeHeaderComponent, MatIconModule, PopupComponent, OperatorUpdatePopupComponent,OperatorConfigurationPopupComponent, AppSetupPopupComponent, I18nPipe, ShowcaseComponent, ChatComponent, AppMenuComponent, HeaderCardComponent, NgComponentOutlet, IndicatorComponent, ProfileSettingsPopupsComponent, NotificationCenterPopupComponent, ExplanationLauncherComponent, FloatingLauncherComponent],
- templateUrl: './member-page.component.html', styleUrl: './member-page.component.scss'
+ imports: [ProfileEditorHostComponent, OperatorPageComponent, HomeHeaderComponent, MatIconModule, PopupComponent, OperatorUpdatePopupComponent,OperatorConfigurationPopupComponent, AppSetupPopupComponent, I18nPipe, ShowcaseComponent, ChatComponent, AppMenuComponent, HeaderCardComponent, ProfileSettingsPopupsComponent, NotificationCenterPopupComponent, ExplanationLauncherComponent, FloatingLauncherComponent],
+ templateUrl: './member-page.component.html', changeDetection: ChangeDetectionStrategy.Eager,
+ styleUrl: './member-page.component.scss'
 })
 export class MemberPageComponent implements OnDestroy {
  private readonly i18n = inject(I18nService);

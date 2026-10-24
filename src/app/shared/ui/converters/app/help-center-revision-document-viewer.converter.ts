@@ -1,8 +1,8 @@
+import { type HelpCenterRevisionDto } from '../../../core/contracts/content/content.interface';
+import { type HelpCenterSectionDto } from '../../../core/contracts/content/content.interface';
 import { AppUtils } from '../../../core/base/app-utils';
 import { APP_STATIC_DATA } from '../../../core/common/app-static-data';
 import {
-  type GuideRevision as HelpCenterRevisionDto,
-  type GuideSection as HelpCenterSectionDto,
   type UiConverter,
   type UiListConverter
 } from '@fssrepository/myscoutee-components';

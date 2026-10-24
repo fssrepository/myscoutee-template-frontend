@@ -1,4 +1,4 @@
-import { Component, HostListener, computed, effect, inject, signal } from '@angular/core';
+import { Component, HostListener, computed, effect, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { AppSetupStore } from '../../context/stores/app/app-setup.store';
 import {
@@ -18,6 +18,7 @@ import { I18nService } from '../../../core/base/services/localization/i18n.servi
   selector: 'app-setup-popup',
   imports: [PopupComponent, AppMenuComponent, I18nPipe, MatIconModule],
   templateUrl: './app-setup-popup.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './app-setup-popup.component.scss'
 })
 export class AppSetupPopupComponent {

@@ -1,4 +1,5 @@
-import type { GuideRevision as HelpCenterRevisionDto } from '@fssrepository/myscoutee-components';
+import type { HelpCenterRevisionDto } from '../../../../core/contracts/content/content.interface';
+
 import type { HelpCenterStateDto } from '../../../../core/contracts/content/content.interface';
 export function cloneHelpCenterState(state: HelpCenterStateDto): HelpCenterStateDto {
   return {

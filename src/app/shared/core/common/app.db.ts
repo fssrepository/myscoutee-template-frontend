@@ -36,7 +36,7 @@ export class AppMemoryDb {
   readonly tables=this._tables.asReadonly();
 
   constructor() {
-    this.hydrationReady=this.storageEnabled
+    this.hydrationReady=this.storageEnabled // NOSONAR S7059: eager hydration is retained in hydrationReady and awaited by whenReady().
       ? this.hydrateFromIndexedDb()
       :this.completeInactiveHydration();
   }
@@ -182,7 +182,7 @@ export class AppMemoryDb {
         catch(error) { transaction.abort(); reject(error); }
       };
       transaction.oncomplete=() => resolve(next!);
-      transaction.onerror=() => reject(transaction.error);
+      transaction.onerror=() => reject(transaction.error ?? new Error('IndexedDB transaction failed'));
       transaction.onabort=() => reject(transaction.error??new Error('IndexedDB transaction aborted'));
     });
   }

@@ -1,7 +1,7 @@
 import { MatIconModule } from '@angular/material/icon';
 import { ActivityChatSingleRowConverter } from '../../../shared/ui/converters/chat/activity-chat-single-row.converter';
 import { AppRuntimeStore } from '../../../shared/ui/context/stores/app/app-runtime.store';
-import { Component, computed, effect, inject, ElementRef, EventEmitter, Output, OnDestroy, signal, untracked, ViewChild } from '@angular/core';
+import { Component, computed, effect, inject, ElementRef, EventEmitter, Output, OnDestroy, signal, untracked, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { NotificationCenterStore } from '../../../shared/ui/context/stores/notification/notification-center.store';
@@ -15,7 +15,8 @@ import { ChatCallService } from '../../../shared/core/base/services/chat/chat-ca
 import { ChatCallPopupComponent } from '../../../shared/ui/components/chat-call-popup/chat-call-popup.component';
 import { ChatMessageMenuConverter, type ChatMessageMenuContext } from '../../../shared/ui/converters/chat/chat-message-menu.converter';
 import { AppUtils } from '../../../shared/core/base/app-utils';
-@Component({selector:'app-template-chat',standalone:true,imports:[MatIconModule,FormsModule,SmartListComponent,SingleRowComponent,I18nPipe,AppMenuComponent,AppMenuTriggerComponent,PopupComponent,ChatCallPopupComponent],templateUrl:'./chat.component.html',styleUrl:'./chat.component.scss'})
+@Component({selector:'app-template-chat',standalone:true,imports:[MatIconModule,FormsModule,SmartListComponent,SingleRowComponent,I18nPipe,AppMenuComponent,AppMenuTriggerComponent,PopupComponent,ChatCallPopupComponent],templateUrl:'./chat.component.html',changeDetection: ChangeDetectionStrategy.Eager,
+styleUrl:'./chat.component.scss'})
 export class ChatComponent implements OnDestroy {
  @Output() readonly closed = new EventEmitter<void>();
  private readonly runtime = inject(AppRuntimeStore);

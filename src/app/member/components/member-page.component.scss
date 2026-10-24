@@ -239,14 +239,6 @@
     border-left: 0;
   }
 }
-.profile-editor-loading {
-  flex: 1;
-  display: grid;
-  place-content: center;
-  justify-items: center;
-  gap: 12px;
-  min-height: 240px;
-  color: #536a84;
-}
+
 
 :host { display: block; @include home-frame.geometry; }

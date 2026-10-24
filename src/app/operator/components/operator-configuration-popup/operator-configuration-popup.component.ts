@@ -1,3 +1,4 @@
+import { OnInit } from '@angular/core';
 import {OperatorEmailConfigurationComponent} from '../operator-email-configuration/operator-email-configuration.component';
 import type {OperatorTlsCertificateMode} from '../../../shared/core/contracts/operator/operator.interface';
 import type {AppMenuTrigger} from '@fssrepository/myscoutee-components';
@@ -13,7 +14,7 @@ interface OperatorPopupActionContext {action:OperatorPopupAction;socialLinkIndex
 @Component({selector:'app-operator-configuration-popup',standalone:true,
  imports:[OperatorEmailConfigurationComponent,FormsModule,MatIconModule,IndicatorComponent,ImageCarouselComponent,FormFlowComponent,LinkInputComponent,AppMenuComponent,PopupComponent,I18nPipe],
  templateUrl:'./operator-configuration-popup.component.html',styleUrl:'./operator-configuration-popup.component.scss',changeDetection:ChangeDetectionStrategy.OnPush})
-export class OperatorConfigurationPopupComponent implements OnDestroy {
+export class OperatorConfigurationPopupComponent implements OnInit, OnDestroy {
  readonly closed=output<void>();
  ngOnInit():void{this.workspace.clearFeedback();void this.workspace.loadConfiguration();}
  ngOnDestroy():void{this.workspace.clearConfigurationCredentialDrafts();this.workspace.clearFeedback();}

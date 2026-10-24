@@ -61,13 +61,3 @@ h1 { font-family: "UnifrakturMaguntia", Georgia, serif; font-size: clamp(4rem, 1
   .entry-header { top: 1rem; left: 1rem; right: 1rem; }
   .brand { --deployment-brand-logo-size: 24px; font-size: 1.1rem; }
 }
-
-.profile-editor-loading {
-  flex: 1;
-  display: grid;
-  place-content: center;
-  justify-items: center;
-  gap: 12px;
-  min-height: 240px;
-  color: #536a84;
-}

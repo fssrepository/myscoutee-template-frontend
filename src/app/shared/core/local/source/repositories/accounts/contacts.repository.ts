@@ -1,3 +1,4 @@
+import { AppUtils } from '../../../../base/app-utils';
 import { Injectable, inject } from '@angular/core';
 import { LocalMemoryDb } from '../../../../common/app.db';
 import { CONTACTS_TABLE_NAME } from '../../entity/accounts/profile.entity';
@@ -10,7 +11,7 @@ export class LocalContactsRepository {
   }
 
 private pairId(first: string, second: string): string {
-    const [left, right] = [first, second].sort();
+    const [left, right] = [first, second].sort(AppUtils.compareCodeUnits);
     return `${left.length}:${left}${right}`;
   }
 }

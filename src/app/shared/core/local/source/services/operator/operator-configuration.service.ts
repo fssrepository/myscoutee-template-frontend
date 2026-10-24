@@ -1,3 +1,4 @@
+import { secureRandomUuid } from '../../../../common/secure-random';
 import {LocalOperatorTlsMapper} from '../../mappers/operator/operator-tls.mapper';
 import type {OperatorTlsCertificateMode,OperatorTlsTestKind,OperatorTlsJobPhase,OperatorTlsConfigurationDto,OperatorTlsConfigurationUpdateDto,OperatorTlsTestRequestDto,OperatorTlsJobDto} from '../../../../contracts/operator/operator.interface';
 import {Injectable,inject} from '@angular/core';
@@ -350,8 +351,7 @@ export class LocalOperatorConfigurationService extends LocalRouteDelayService {
   }
 
   private createToken(prefix: string): string {
-    const random = globalThis.crypto?.randomUUID?.().replaceAll('-', '')
-      ?? `${Date.now().toString(16)}${Math.random().toString(16).slice(2)}`;
+    const random = secureRandomUuid().replaceAll('-', '');
     return `${prefix}_${random}`;
   }
 }

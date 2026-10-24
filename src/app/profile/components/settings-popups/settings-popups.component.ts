@@ -1,3 +1,5 @@
+import { type HelpCenterRevisionDto } from '../../../shared/core/contracts/content/content.interface';
+import { type HelpCenterSectionDto } from '../../../shared/core/contracts/content/content.interface';
 
 import {
   ChangeDetectorRef,
@@ -5,7 +7,8 @@ import {
   Component,
   HostListener,
   effect,
-  inject
+  inject,
+  ChangeDetectionStrategy
 } from '@angular/core';
 
 import {
@@ -16,10 +19,7 @@ import {
 } from '../../../shared/core/common/app-static-data';
 import { HelpCenterService } from '../../../shared/core/base/services/help/help-center.service';
 import { PrivacyPolicyService } from '../../../shared/core/base/services/help/privacy-policy.service';
-import {
-  type GuideRevision as HelpCenterRevisionDto,
-  type GuideSection as HelpCenterSectionDto
-} from '@fssrepository/myscoutee-components';
+
 import { DocumentViewerComponent } from '../../../shared/ui/components/document-viewer/document-viewer.component';
 import { type DocumentViewerAction, type DocumentViewerActionEvent, type DocumentViewerActionVisibility, type DocumentViewerConfig } from '../../../shared/ui/components/document-viewer';
 
@@ -36,6 +36,7 @@ import { UserProfileStore } from '../../../shared/ui/context/stores/profile/user
     DocumentViewerComponent
   ],
   templateUrl: './settings-popups.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './settings-popups.component.scss'
 })
 export class ProfileSettingsPopupsComponent {
@@ -224,7 +225,7 @@ export class ProfileSettingsPopupsComponent {
       const optionalSectionIds = this.optionalPrivacySectionIds(revision.sections);
       const approvedOptionalSectionIds = Array.from(new Set(selectedSectionIds))
         .filter(sectionId => optionalSectionIds.has(sectionId))
-        .sort();
+        .sort(AppUtils.compareCodeUnits);
       const consent = await this.privacyPolicy.saveConsent({
         userId,
         revisionId: revision.id,

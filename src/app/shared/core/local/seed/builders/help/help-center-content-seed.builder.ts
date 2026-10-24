@@ -1,5 +1,7 @@
+import type { HelpCenterDocumentKind as GuideDocumentKind } from '../../../../contracts/content/content.interface';
+import type { HelpCenterRevisionDto as GuideRevision } from '../../../../contracts/content/content.interface';
 import { HelpCenterContentBuilder } from '../../../../base/builders/help/help-center-content.builder';
-import type { GuideDocumentKind, GuideRevision } from '@fssrepository/myscoutee-components';
+
 import revisions from '../../data/help-center-revisions.json';
 export class SeedHelpCenterContentBuilder {
  static documentLabel = HelpCenterContentBuilder.documentLabel;

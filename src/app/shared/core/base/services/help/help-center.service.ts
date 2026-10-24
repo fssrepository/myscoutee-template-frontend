@@ -1,3 +1,4 @@
+import type { HelpCenterDocumentKind } from '../../../contracts/content/content.interface';
 import { HTTP_ADAPTER, LOCAL_ADAPTER, type AdapterInstance } from '../../adapter-loaders';
 import { AdapterProxyService } from '../platform/adapter-proxy.service';
 import {
@@ -8,7 +9,7 @@ import {
   inject,
   signal
 } from '@angular/core';
-import type { GuideDocumentKind as HelpCenterDocumentKind } from '@fssrepository/myscoutee-components';
+
 import type { HelpCenterStateDto, PrivacyConsentDto, PrivacyConsentSaveRequestDto } from '../../../contracts';
 import {
   BaseRouteModeService

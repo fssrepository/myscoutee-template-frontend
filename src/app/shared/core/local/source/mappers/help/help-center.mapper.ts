@@ -1,10 +1,9 @@
-import type {
-  GuideDocumentKind as HelpCenterDocumentKind,
-  GuideHeaderColor as HelpCenterHeaderColor,
-  GuideRevision as HelpCenterRevisionDto,
-  GuideSection as HelpCenterSectionDto,
-  GuideSectionPanelSpan as HelpCenterSectionPanelSpan
-} from '@fssrepository/myscoutee-components';
+import type { HelpCenterDocumentKind } from '../../../../contracts/content/content.interface';
+import type { HelpCenterRevisionDto } from '../../../../contracts/content/content.interface';
+import type { HelpCenterSectionDto } from '../../../../contracts/content/content.interface';
+import type { HelpCenterHeaderColor } from '../../../../contracts/content/content.interface';
+import type { HelpCenterSectionPanelSpan } from '../../../../contracts/content/content.interface';
+
 import type { HelpCenterAuditEntryDto, HelpCenterAuditAction, PrivacyConsentSource, PrivacyConsentDto } from '../../../../contracts/content/content.interface';
 import type {
   HelpCenterAuditRecord,

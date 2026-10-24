@@ -1,10 +1,11 @@
+import { ExplanationGuideService } from '../../../shared/core/base/services/help/explanation-guide.service';
+import { OnInit } from '@angular/core';
 import { McpConnectionsComponent } from './mcp-connections.component';
 import { IntegrationAccessButtonComponent } from './integration-access-button.component';
 import { IntegrationSettingsStore } from '../../../shared/ui/context/stores/profile/integration-settings.store';
 import {
   CopyLinkComponent,
   IndicatorComponent,
-  ExplanationGuideService,
   PopupComponent,
   type PopupActionEvent,
   type PopupModel,
@@ -48,7 +49,7 @@ type IntegrationActionContext =
   styleUrl: './integration-settings-popup.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class IntegrationSettingsPopupComponent implements OnDestroy {
+export class IntegrationSettingsPopupComponent implements OnInit, OnDestroy {
   readonly closed = output<void>();
   ngOnInit(): void { this.openPopup(); }
   protected readonly store = inject(IntegrationSettingsStore);

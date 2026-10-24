@@ -1,0 +1,16 @@
+@if (editor.open() && !editor.component()) {
+  <app-popup [model]="editor.loadingModel">
+    <div class="profile-editor-loading" role="status" [attr.aria-busy]="!editor.loadFailed()">
+      @if (editor.loadFailed()) {
+        <mat-icon>error_outline</mat-icon>
+        <button type="button" (click)="editor.ensureLoaded()">{{ 'try.again' | i18n }}</button>
+      } @else {
+        <app-indicator kind="spinner-ring" state="loading" />
+        <span>{{ 'loading.profile' | i18n: 'Loading profile' }}</span>
+      }
+    </div>
+  </app-popup>
+}
+@if (editor.open() && editor.component(); as profileComponent) {
+  <ng-container *ngComponentOutlet="profileComponent" />
+}

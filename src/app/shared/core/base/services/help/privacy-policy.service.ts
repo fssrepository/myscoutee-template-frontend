@@ -1,9 +1,9 @@
+import type { HelpCenterRevisionDto } from '../../../contracts/content/content.interface';
+import type { HelpCenterSectionDto } from '../../../contracts/content/content.interface';
+import { AppUtils } from '../../app-utils';
 import { Injectable, computed, inject, signal } from '@angular/core';
 
-import type {
-  GuideRevision as HelpCenterRevisionDto,
-  GuideSection as HelpCenterSectionDto
-} from '@fssrepository/myscoutee-components';
+
 import type { EntryConsentStateDto, HelpCenterStateDto, PrivacyConsentDto, PrivacyConsentSaveRequestDto } from '../../../contracts';
 import { APP_STORAGE_KEYS } from '../../../common/storage-scope';
 import { HelpCenterService } from './help-center.service';
@@ -73,7 +73,7 @@ export class PrivacyPolicyService {
       userId: normalizedUserId,
       revisionId: revision.id,
       revisionVersion: revision.version,
-      approvedOptionalSectionIds: Array.from(this.loadEntryOptionalApprovals(revision)).sort(),
+      approvedOptionalSectionIds: Array.from(this.loadEntryOptionalApprovals(revision)).sort(AppUtils.compareCodeUnits),
       source: 'entry'
     });
     return true;
@@ -109,7 +109,7 @@ export class PrivacyPolicyService {
       approvedSectionIds
         .map(sectionId => `${sectionId ?? ''}`.trim())
         .filter(sectionId => optionalSectionIds.has(sectionId))
-    )).sort();
+    )).sort(AppUtils.compareCodeUnits);
     localStorage.setItem(PrivacyPolicyService.OPTIONAL_PRIVACY_APPROVAL_KEY, JSON.stringify({
       revisionKey: this.revisionKey(revision),
       approvedSectionIds: normalizedIds

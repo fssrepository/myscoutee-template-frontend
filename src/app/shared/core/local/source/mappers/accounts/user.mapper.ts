@@ -16,6 +16,7 @@ export class LocalUsersMapper {
   static toSelectorListItem(record: UserRecord): UserSelectorListItemDto {
     return {
       id: record.id,
+      locationRequired: !record.partitionKey?.trim(),
       locationCoordinates: record.locationCoordinates ? { ...record.locationCoordinates } : null,
       name: record.name,
       city: record.city,

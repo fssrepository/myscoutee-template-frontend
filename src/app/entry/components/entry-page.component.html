@@ -17,23 +17,26 @@
   @if (pwa.appVersionLabel()) { <span class="version" data-i18n-ignore>{{ pwa.appVersionLabel() }}</span> }
 </main>
 <app-explanation-launcher [introduce]="!busy()"/>
-@if (consentOpen()) { <app-document-viewer [config]="privacyConfig()" (action)="consentAction($event)" /> }
-<app-entry-firebase-auth-popup [open]="authOpen()" [busy]="session.firebaseBusy()" [statusMessage]="session.firebaseNotice() || error()" (closeRequested)="authOpen.set(false)" (authRequested)="authenticate($event)" />
-
-@defer (when setup.isOpen()) { <app-setup-popup/> }
-@if (editor.open() && !editor.component()) {
-  <app-popup [model]="editor.loadingModel">
-    <div class="profile-editor-loading" role="status" [attr.aria-busy]="!editor.loadFailed()">
-      @if (editor.loadFailed()) {
-        <mat-icon>error_outline</mat-icon>
-        <button type="button" (click)="editor.ensureLoaded()">{{ 'try.again' | i18n }}</button>
-      } @else {
-        <app-indicator kind="spinner-ring" state="loading" />
-        <span>{{ 'loading.profile' | i18n: 'Loading profile' }}</span>
-      }
-    </div>
+@if (consentOpen()) {
+  <ng-container #privacyDocumentHost />
+  @if (!documentViewerComponent()) {
+    <app-popup [model]="{ title: 'privacy.document.title', size: 'wide', height: 'full', headerLayout: 'document', closeOnBackdrop: false }" (close)="closeConsent()">
+      <app-indicator kind="load-ring" state="loading" />
+    </app-popup>
+  }
+}
+<ng-container #authPopupHost />
+@if (authOpen() && !authPopupComponent()) {
+  <app-popup [model]="{ title: 'login', size: 'small', height: 'auto' }" (close)="authOpen.set(false)">
+    <app-indicator kind="load-ring" state="loading" />
   </app-popup>
 }
-@if (editor.open() && editor.component(); as profileComponent) {
-  <ng-container *ngComponentOutlet="profileComponent" />
+
+@if (setupPopupComponent(); as component) {
+  <ng-container *ngComponentOutlet="component" />
+} @else if (setup.isOpen()) {
+  <app-popup [model]="{ title: 'app.setup.title', size: 'small', height: 'auto', mobilePresentation: 'fullscreen' }" (close)="setup.close()">
+    <app-indicator kind="load-ring" state="loading" />
+  </app-popup>
 }
+<app-profile-editor-host />

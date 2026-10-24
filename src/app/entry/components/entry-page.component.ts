@@ -1,20 +1,25 @@
+import { GUIDE_CONTEXT } from '@fssrepository/myscoutee-components';
+import { ExplanationGuideService } from '../../shared/core/base/services/help/explanation-guide.service';
+import { ProfileEditorHostComponent } from '../../shared/ui/components/profile-editor-host/profile-editor-host.component';
+import { preloadAdapterMode } from '../../shared/core/base/adapter-loaders';
 import { AppSetupStore } from '../../shared/ui/context/stores/app/app-setup.store';
-import { AppSetupPopupComponent } from '../../shared/ui/components/app-setup-popup/app-setup-popup.component';
 import { UserProfileStore } from '../../shared/ui/context/stores/profile/user-profile.store';
 import { ProfileEditorStore } from '../../shared/ui/context/stores/profile/profile-editor.store';
 import { NgComponentOutlet } from '@angular/common';
 import { AppLocationService } from '../../shared/core/base/services/accounts/app-location.service';
 import type { UserDto } from '../../shared/core/contracts/accounts/user.interface';
-import { Component, OnInit, OnDestroy, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, ErrorHandler, OnInit, OnDestroy, ViewContainerRef, computed, effect, inject, inputBinding, outputBinding, signal, untracked, viewChild, type Type, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { DeploymentBrandComponent, IndicatorComponent, PopupComponent, I18nPipe, DialogStore, ExplanationGuideService, AppMenuComponent, type AppMenuItem } from '@fssrepository/myscoutee-components';
+import { DeploymentBrandComponent, IndicatorComponent, PopupComponent, I18nPipe, DialogStore, AppMenuComponent, type AppMenuItem } from '@fssrepository/myscoutee-components';
 import { MatIconModule } from '@angular/material/icon';
 import { MatRippleModule } from '@angular/material/core';
 import { ExplanationLauncherComponent } from '../../shared/ui/components/explanation-popup/explanation-launcher.component';
 import { LandingGuideSurfaceDirective } from './entry-landing/landing-guide-surface.directive';
 import { LANDING_EXPLANATION_GUIDE } from '../../shared/core/base/services/help/landing-explanation-guide';
-import { EntryFirebaseAuthPopupComponent } from './entry-firebase-auth-popup/entry-firebase-auth-popup.component';
-import { DocumentViewerComponent } from '../../shared/ui/components/document-viewer';
+import type { EntryFirebaseAuthPopupComponent } from './entry-firebase-auth-popup/entry-firebase-auth-popup.component';
+import type { DocumentViewerComponent } from '../../shared/ui/components/document-viewer';
+import { PopupAdapterProxyService } from '../../shared/ui/context/popup-adapter-proxy.service';
+import { POPUP_ADAPTER } from '../../shared/ui/context/popup-adapter-loaders';
 import { HelpCenterRevisionDocumentViewerConfigConverter } from '../../shared/ui/converters/app/help-center-revision-document-viewer.converter';
 import type { DocumentViewerActionEvent, DocumentViewerConfig } from '../../shared/ui/components/document-viewer';
 import type { FirebaseAuthRequestDto, EntryConsentStateDto, EntryConsentAuditRecordDto } from '../../shared/core/contracts/accounts/user.interface';
@@ -31,11 +36,20 @@ import { DemoBootstrapSelectorStore } from '../../shared/ui/context/stores/app/d
 
 @Component({
   selector: 'app-entry-page', standalone: true,
-  imports: [DeploymentBrandComponent, AppMenuComponent, MatIconModule, MatRippleModule, AppSetupPopupComponent, NgComponentOutlet, IndicatorComponent, PopupComponent, I18nPipe, EntryFirebaseAuthPopupComponent, DocumentViewerComponent, ExplanationLauncherComponent, LandingGuideSurfaceDirective],
-  providers: [{ provide: ExplanationGuideService, useExisting: LANDING_EXPLANATION_GUIDE }],
-  templateUrl: './entry-page.component.html', styleUrl: './entry-page.component.scss'
+  imports: [ProfileEditorHostComponent, DeploymentBrandComponent, AppMenuComponent, MatIconModule, MatRippleModule, NgComponentOutlet, IndicatorComponent, PopupComponent, I18nPipe, ExplanationLauncherComponent, LandingGuideSurfaceDirective],
+  providers: [{ provide: GUIDE_CONTEXT, useExisting: ExplanationGuideService }, { provide: ExplanationGuideService, useExisting: LANDING_EXPLANATION_GUIDE }],
+  templateUrl: './entry-page.component.html', changeDetection: ChangeDetectionStrategy.Eager,
+ styleUrl: './entry-page.component.scss'
 })
 export class EntryPageComponent implements OnInit, OnDestroy {
+  private readonly popupAdapters = inject(PopupAdapterProxyService);
+  private readonly popupErrors = inject(ErrorHandler);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly privacyDocumentHost = viewChild('privacyDocumentHost', { read: ViewContainerRef });
+  private readonly authPopupHost = viewChild('authPopupHost', { read: ViewContainerRef });
+  protected readonly setupPopupComponent = signal<Type<unknown> | null>(null);
+  protected readonly documentViewerComponent = signal<Type<DocumentViewerComponent> | null>(null);
+  protected readonly authPopupComponent = signal<Type<EntryFirebaseAuthPopupComponent> | null>(null);
   protected readonly deployment = inject(DeploymentConfigurationService);
   protected readonly pwa = inject(PwaService);
   protected readonly session = inject(SessionService);
@@ -84,6 +98,50 @@ export class EntryPageComponent implements OnInit, OnDestroy {
       statusMessage: this.error(), statusTone: this.error() ? 'error' : 'default'
     });
   });
+
+  constructor() {
+    effect(() => {
+      if (!this.setup.isOpen() || this.setupPopupComponent()) return;
+      void this.popupAdapters.load(POPUP_ADAPTER.APP_SETUP).then(module => {
+        if (!this.destroyRef.destroyed) this.setupPopupComponent.set(module.AppSetupPopupComponent);
+      }).catch(error => this.popupErrors.handleError(error));
+    });
+    effect(onCleanup => {
+      const host = this.privacyDocumentHost();
+      const component = this.documentViewerComponent();
+      if (!host) return;
+      if (!component) {
+        void this.popupAdapters.load(POPUP_ADAPTER.DOCUMENT_VIEWER).then(module => {
+          if (!this.destroyRef.destroyed) this.documentViewerComponent.set(module.DocumentViewerComponent);
+        }).catch(error => this.popupErrors.handleError(error));
+        return;
+      }
+      const ref = untracked(() => host.createComponent(component, { bindings: [
+        inputBinding('config', () => this.privacyConfig()),
+        outputBinding<DocumentViewerActionEvent>('action', event => { void this.consentAction(event); })
+      ] }));
+      onCleanup(() => ref.destroy());
+    });
+    effect(() => {
+      if (!this.authOpen() || this.authPopupComponent()) return;
+      void this.popupAdapters.load(POPUP_ADAPTER.ENTRY_AUTH).then(module => {
+        if (!this.destroyRef.destroyed) this.authPopupComponent.set(module.EntryFirebaseAuthPopupComponent);
+      }).catch(error => this.popupErrors.handleError(error));
+    });
+    effect(onCleanup => {
+      const host = this.authPopupHost();
+      const component = this.authPopupComponent();
+      if (!host || !component) return;
+      const ref = untracked(() => host.createComponent(component, { bindings: [
+        inputBinding('open', () => this.authOpen()),
+        inputBinding('busy', () => this.session.firebaseBusy()),
+        inputBinding('statusMessage', () => this.session.firebaseNotice() || this.error()),
+        outputBinding<void>('closeRequested', () => this.authOpen.set(false)),
+        outputBinding<FirebaseAuthRequestDto>('authRequested', event => { void this.authenticate(event); })
+      ] }));
+      onCleanup(() => ref.destroy());
+    });
+  }
 
   ngOnInit(): void {
     this.landingGuide.beginVisit();
@@ -181,8 +239,11 @@ export class EntryPageComponent implements OnInit, OnDestroy {
     const mode = this.pendingEntry;
     this.pendingEntry = null;
     if (mode === 'login' || mode === 'operator') {
-      if (environment.firebaseLoginEnabled) await this.firebase.ensureFirebaseRuntime();
-      else this.session.setFirebaseRuntimeAvailable(false);
+      await Promise.all([
+        preloadAdapterMode(environment.activitiesDataSource),
+        environment.firebaseLoginEnabled ? this.firebase.ensureFirebaseRuntime()
+          : Promise.resolve(this.session.setFirebaseRuntimeAvailable(false))
+      ]);
       // Match native openEntryOperator: installed operators can sign in before Firebase is configured.
       if (this.session.authMode === 'firebase' || (mode === 'operator' && !this.localMode)) {
         this.authOpen.set(true); return;

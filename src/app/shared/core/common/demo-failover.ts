@@ -78,7 +78,7 @@ function isLandingPage(): boolean {
   return path === base || path === `${base}/entry`;
 }
 
-function anonymousLanding(): boolean {
+export function anonymousLanding(): boolean {
   // A retained real/operator/support session must never become a synthetic actor.
   return isLandingPage() && localStorage.getItem(HTTP_SESSION) === null;
 }

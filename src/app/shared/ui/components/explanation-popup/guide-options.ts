@@ -1,4 +1,5 @@
-import type { ExplanationGuideOptions } from '@fssrepository/myscoutee-components';
+import type { ExplanationGuideOptions } from '../../../core/base/services/help/explanation-guide.service';
+
 import { APP_STATIC_DATA } from '../../../core/common/app-static-data';
 import { APP_STORAGE_KEYS } from '../../../core/common/storage-scope';
 

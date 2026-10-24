@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, output, untracked } from '@angular/core';
+import { Component, computed, effect, inject, output, untracked, ChangeDetectionStrategy } from '@angular/core';
 import { AppMenuComponent, DeploymentBrandComponent, type AppMenuItem, I18nPipe } from '@fssrepository/myscoutee-components';
 import { DeploymentConfigurationService } from '../../../shared/core/base/services/platform/deployment-configuration.service';
 import { OperatorWorkspaceStore } from '../../../shared/ui/context/stores/operator/operator-workspace.store';
@@ -7,7 +7,8 @@ import { UserProfileStore } from '../../../shared/ui/context/stores/profile/user
 @Component({
   selector: 'app-operator-page', standalone: true,
   imports: [AppMenuComponent, I18nPipe, DeploymentBrandComponent],
-  templateUrl: './operator-page.component.html', styleUrl: './operator-page.component.scss'
+  templateUrl: './operator-page.component.html', changeDetection: ChangeDetectionStrategy.Eager,
+ styleUrl: './operator-page.component.scss'
 })
 export class OperatorPageComponent {
   readonly actionSelected = output<string>();

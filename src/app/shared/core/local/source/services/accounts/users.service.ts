@@ -58,34 +58,16 @@ export class LocalUsersService extends LocalRouteDelayService implements UserSer
 
   async checkLocationEligibility(coordinates?: LocationCoordinates | null): Promise<UserLocationEligibilityResponseDto> {
     const overrideCountryCode = this.readDemoCountryCodeOverride();
-    if (!coordinates && !overrideCountryCode) {
-      return {
-        eligible: true,
-        partitionKey: null,
-        message: null,
-        securityGateEnabled: false,
-        locationRequired: false
-      };
-    }
-
-    const partitionKey = coordinates
-      ? this.countryPartitionsRepository.resolvePartitionKeyByCoordinates(coordinates)
-      : this.countryPartitionsRepository.resolvePartitionKeyByCountryCode(overrideCountryCode);
-    if (partitionKey) {
-      return {
-        eligible: true,
-        partitionKey,
-        message: null,
-        securityGateEnabled: true,
-        locationRequired: false
-      };
-    }
-
+    const partitionKey = this.countryPartitionsRepository.resolvePartitionKeyByCountryCode(overrideCountryCode);
+    const validCoordinates = !coordinates || (Number.isFinite(coordinates.latitude)
+      && Number.isFinite(coordinates.longitude) && Math.abs(coordinates.latitude) <= 90
+      && Math.abs(coordinates.longitude) <= 180);
+    const eligible = validCoordinates && (!overrideCountryCode || Boolean(partitionKey));
     return {
-      eligible: false,
-      partitionKey: null,
-      message: LocalUsersService.INELIGIBLE_REGION_MESSAGE,
-      securityGateEnabled: true,
+      eligible,
+      partitionKey,
+      message: eligible ? null : LocalUsersService.INELIGIBLE_REGION_MESSAGE,
+      securityGateEnabled: false,
       locationRequired: false
     };
   }
@@ -130,7 +112,7 @@ export class LocalUsersService extends LocalRouteDelayService implements UserSer
    await this.usersRepository.whenReady();
    return LocalUsersMapper.toSelectorListItemList(this.usersRepository.queryAvailableDemoUsers(selectorRole));
   })()]);
-  return users.map(user => ({ ...user, locationRequired: selectorRole === 'member' && !this.countryPartitionsRepository.resolvePartitionKeyByCoordinates(user.locationCoordinates) }));
+  return users.map(user => ({ ...user, locationRequired: selectorRole === 'member' && user.locationRequired === true }));
  }
  private async readUserById(userId?: string): Promise<UserByIdQueryResponse> {
   const record = this.usersRepository.queryUserById(userId?.trim() ?? '');
@@ -141,7 +123,14 @@ export class LocalUsersService extends LocalRouteDelayService implements UserSer
     if (!user?.id?.trim()) return null;
     await this.usersRepository.whenReady();
     await this.validateLocationForSave(user.locationCoordinates);
-    const saved = this.usersRepository.upsertUser(LocalUsersMapper.toRecord(user));
+    const record = LocalUsersMapper.toRecord(user);
+    if (!record.partitionKey && !this.usersRepository.queryUserById(user.id)?.partitionKey) {
+      const partition = this.countryPartitionsRepository.randomPartition();
+      record.partitionKey = partition.partitionKey;
+      record.city ||= partition.city;
+      record.locationCoordinates ??= partition.locationCoordinates;
+    }
+    const saved = this.usersRepository.upsertUser(record);
     await this.usersRepository.flushToIndexedDb();
     return LocalUsersMapper.toDto(saved);
    });

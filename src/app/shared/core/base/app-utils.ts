@@ -67,6 +67,57 @@ const ASCII_EMOJI_TOKEN_REGEX = new RegExp(
 );
 
 export class AppUtils {
+  static normalizeMessages(value: Record<string, string> | null, normalizeSourceKey: (value: string) => string): Record<string, string> | null {
+    if (!value || typeof value !== 'object') {
+      return null;
+    }
+    const normalized: Record<string, string> = {};
+    Object.entries(value).forEach(([key, translation]) => {
+      const normalizedKey = normalizeSourceKey(key);
+      const normalizedTranslation = `${translation ?? ''}`.trim();
+      if (normalizedKey && normalizedTranslation) {
+        normalized[normalizedKey] = normalizedTranslation;
+      }
+    });
+    return normalized;
+  }
+
+  static normalizeLanguage(value: string): string {
+    return `${value ?? ''}`
+      .trim()
+      .toLowerCase()
+      .split(',')[0]
+      .split(';')[0]
+      .split('-')[0]
+      .replace(/[^a-z]/g, '');
+  }
+
+  static trimEndCharacters(value: string, characters: string): string {
+    let end = value.length;
+    while (end > 0 && characters.includes(value[end - 1])) end--;
+    return value.slice(0, end);
+  }
+
+  static trimCharacters(value: string, characters: string): string {
+    const trimmedEnd = this.trimEndCharacters(value, characters);
+    let start = 0;
+    while (start < trimmedEnd.length && characters.includes(trimmedEnd[start])) start++;
+    return trimmedEnd.slice(start);
+  }
+
+  static isEmail(value: string): boolean {
+    const separator = value.indexOf('@');
+    const domainDot = value.lastIndexOf('.');
+    return separator > 0 && separator === value.lastIndexOf('@')
+      && domainDot > separator + 1 && domainDot < value.length - 1
+      && !/\s/.test(value);
+  }
+
+  // Canonical keys and signatures use UTF-16 order, independent of the user's locale.
+  static compareCodeUnits(left: string, right: string): number {
+    return left < right ? -1 : left > right ? 1 : 0;
+  }
+
 static initialsFromText(value: string): string {
     const words = value
       .trim()

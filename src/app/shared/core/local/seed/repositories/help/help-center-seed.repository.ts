@@ -1,3 +1,6 @@
+import type { HelpCenterDocumentKind } from '../../../../contracts/content/content.interface';
+import type { HelpCenterRevisionDto } from '../../../../contracts/content/content.interface';
+import { HelpCenterContentBuilder } from '../../../../base/builders/help/help-center-content.builder';
 import { HELP_CENTER_TABLE_NAME } from '../../../source/entity/content/content.entity';
 import type {
   HelpCenterGuideFieldRecord,
@@ -9,10 +12,7 @@ import { Injectable, inject } from '@angular/core';
 import { APP_STATIC_DATA } from '../../../../common/app-static-data';
 import { LocalMemoryDb } from '../../../../common/app.db';
 
-import type {
-  GuideDocumentKind as HelpCenterDocumentKind,
-  GuideRevision as HelpCenterRevisionDto
-} from '@fssrepository/myscoutee-components';
+
 import type { HelpCenterAuditEntryDto } from '../../../../contracts';
 import { LocalHelpCenterMapper } from '../../../source/mappers/help/help-center.mapper';
 import { SeedHelpCenterContentBuilder } from '../../builders/help/help-center-content-seed.builder';
@@ -260,16 +260,9 @@ export class SeedHelpCenterRepository {
     return normalized === 'hu' ? 'hu' : 'en';
   }
 
-  private languageLabel(lang: string | null | undefined): string {
-    return this.normalizeLang(lang) === 'hu' ? 'Magyar' : 'English';
-  }
+  private languageLabel(lang: string | null | undefined): string { return HelpCenterContentBuilder.languageLabel(lang); }
 
-  private availableLanguages(): Array<{ lang: string; label: string }> {
-    return APP_STATIC_DATA.contentLanguages.map(language => ({
-      lang: this.normalizeLang(language.lang),
-      label: language.label
-    }));
-  }
+  private availableLanguages(): Array<{ lang: string; label: string }> { return HelpCenterContentBuilder.availableLanguages(APP_STATIC_DATA.contentLanguages); }
 
   private activeRevisionKey(kind: HelpCenterDocumentKind, lang: string, contextKey?: string | null): string {
     const context = this.normalizeContextKey(kind, contextKey);

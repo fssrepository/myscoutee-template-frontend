@@ -1,3 +1,4 @@
+import { operatorRequestOptions, requireOperatorResponse } from './operator-request';
 const OPERATOR_TLS_CONFIGURATION_ROUTE='/operator/configuration/tls';
 const UPDATE_POLL_INTERVAL_MS=750;
 import type {OperatorTlsCertificateMode,OperatorTlsTestKind,OperatorTlsJobPhase,OperatorTlsConfigurationDto,OperatorTlsConfigurationUpdateDto,OperatorTlsTestRequestDto,OperatorTlsJobDto} from '../../../contracts/operator/operator.interface';
@@ -8,7 +9,6 @@ import {SessionService} from '../../../base/services/accounts/session.service';
 import {RouteDelayService} from '../../../base/services/platform/route-delay.service';
 import type {OperatorConfigurationDto, OperatorConfigurationSaveRequestDto, OperatorConfigurationTestRequestDto, OperatorConfigurationTestResultDto} from '../../../contracts/operator/operator.interface';
 const OPERATOR_CONFIGURATION_ROUTE='/operator/configuration';
-const DEMO_OPERATOR_USER_HEADER='X-Demo-User-Id';
 @Injectable({providedIn:'root'})
 export class HttpOperatorConfigurationService {
  private readonly http=inject(HttpClient);
@@ -95,31 +95,9 @@ export class HttpOperatorConfigurationService {
     );
   }
 
-  private requestOptions(params?: HttpParams): { headers?: HttpHeaders; params?: HttpParams } {
-    const session = this.sessionService.currentSession();
-    const options: { headers?: HttpHeaders; params?: HttpParams } = {};
-    if (session?.kind === 'demo') {
-      options.headers = new HttpHeaders({
-        [DEMO_OPERATOR_USER_HEADER]: session.userId.trim()
-      });
-    }
-    if (params) {
-      options.params = params;
-    }
-    return options;
-  }
+  private requestOptions(params?: HttpParams): { headers?: HttpHeaders; params?: HttpParams } { return operatorRequestOptions(this.sessionService.currentSession(), params); }
 
-  private async requireResponse<T>(route: string, task: Promise<T | undefined>): Promise<T> {
-    const response = await this.routeDelay.withRequestTimeout(
-      route,
-      task,
-      'operator.request.timeout'
-    );
-    if (!response) {
-      throw new Error('operator.registration.error.response.unavailable');
-    }
-    return response;
-  }
+  private async requireResponse<T>(route: string, task: Promise<T | undefined>): Promise<T> { return requireOperatorResponse(this.routeDelay, route, task); }
 
   async loadTlsConfiguration(): Promise<OperatorTlsConfigurationDto> {
     return await this.requireResponse(

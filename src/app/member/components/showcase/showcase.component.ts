@@ -1,8 +1,9 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { SmartListComponent, InfoCardComponent, UiDateUtils,
-  type SmartListConfig, type InfoCardData } from '@fssrepository/myscoutee-components';
+  type SmartListConfig, type InfoCardData 
+} from '@fssrepository/myscoutee-components';
 import { ShowcaseService } from '../../../shared/core/base/services/showcase/showcase.service';
 import { AppRuntimeStore } from '../../../shared/ui/context/stores/app/app-runtime.store';
 import type { SampleCardDto } from '../../../shared/core/contracts/showcase/showcase.interface';
@@ -16,7 +17,8 @@ export const SHOWCASE_VIEW_OPTIONS = [
 @Component({
   selector: 'app-showcase', standalone: true,
   imports: [SmartListComponent, InfoCardComponent],
-  templateUrl: './showcase.component.html', styleUrl: './showcase.component.scss'
+  templateUrl: './showcase.component.html', changeDetection: ChangeDetectionStrategy.Eager,
+ styleUrl: './showcase.component.scss'
 })
 export class ShowcaseComponent {
   private readonly route = inject(ActivatedRoute);

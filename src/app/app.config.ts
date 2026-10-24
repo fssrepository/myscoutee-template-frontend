@@ -1,7 +1,8 @@
+import { anonymousLanding } from './shared/core/common/demo-failover';
 import { I18nService } from './shared/core/base/services/localization/i18n.service';
 import { connectivityInterceptor } from './shared/core/http/interceptors/platform/connectivity.interceptor';
 import { ApplicationConfig, inject, provideAppInitializer, provideBrowserGlobalErrorListeners } from '@angular/core';
-import { provideHttpClient,withInterceptors } from '@angular/common/http';
+import { provideHttpClient, withInterceptors, withXhr } from '@angular/common/http';
 import { routes } from './app.routes';
 import { provideRouter } from '@angular/router';
 import { SHARED_UI_PROVIDERS } from './shared/ui/context/ui.providers';
@@ -16,7 +17,7 @@ export const appConfig: ApplicationConfig={
   providers: [
     provideAppInitializer(() => inject(I18nService).initialize()),
     ...SHARED_UI_PROVIDERS,provideBrowserGlobalErrorListeners(),provideRouter(routes),
-    provideHttpClient(withInterceptors([connectivityInterceptor,sessionModeInterceptor,operatorBootstrapAuthInterceptor,firebaseAuthInterceptor,adminAccessInterceptor]))
+    provideHttpClient(withXhr(), withInterceptors([connectivityInterceptor,sessionModeInterceptor,operatorBootstrapAuthInterceptor,firebaseAuthInterceptor,adminAccessInterceptor]))
   ]
 };
 
@@ -26,6 +27,7 @@ export async function loadAppConfig(): Promise<ApplicationConfig> {
     if (entry.mode) modes.add(entry.mode);
     else if (entry.http) modes.add('http');
   }
-  await Promise.all([...modes].map(mode => preloadAdapterMode(mode)));
+  const phase = environment.activitiesDataSource === 'http' && anonymousLanding() ? 'entry' : 'workspace';
+  await Promise.all([...modes].map(mode => preloadAdapterMode(mode, phase)));
   return appConfig;
 }

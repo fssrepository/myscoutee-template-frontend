@@ -79,6 +79,8 @@ export class LocalUsersRepository {
   this.memoryDb.write(state => {
    const table = state[USERS_TABLE_NAME];
    const previous = table.byId[user.id];
+   const partitionKey = previous?.partitionKey || user.partitionKey;
+   if (partitionKey) user = { ...user, partitionKey };
    return { ...state, [USERS_TABLE_NAME]: {
     byId: { ...table.byId, [user.id]: { ...previous, ...user, devices: previous?.devices } },
     ids: previous ? [...table.ids] : [...table.ids, user.id]

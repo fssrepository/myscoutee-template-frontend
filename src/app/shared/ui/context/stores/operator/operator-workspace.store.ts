@@ -1,3 +1,4 @@
+import { AppUtils } from '../../../../core/base/app-utils';
 import {OperatorUpdateService} from '../../../../core/base/services/operator/operator-update.service';
 import {PwaService} from '../../../../core/base/services/platform/pwa.service';
 import type {OperatorDeploymentUpdatePhase,OperatorDeploymentUpdateProgressDto,OperatorDeploymentUpdateProgressHandler,OperatorRollbackDto,OperatorDeploymentUpdateDto} from '../../../../core/contracts/operator/operator-update.interface';
@@ -924,7 +925,7 @@ export class OperatorWorkspaceStore {
     }
     if (
       draft.mode === 'AUTOMATIC'
-      && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.contactEmail.trim())
+      && !AppUtils.isEmail(draft.contactEmail.trim())
     ) {
       return false;
     }

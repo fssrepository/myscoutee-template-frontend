@@ -1,4 +1,6 @@
-import type { GuideHeaderColor, GuideDocumentKind } from '@fssrepository/myscoutee-components';
+import type { HelpCenterDocumentKind as GuideDocumentKind } from '../contracts/content/content.interface';
+import type { HelpCenterHeaderColor as GuideHeaderColor } from '../contracts/content/content.interface';
+
 import type { ExplainableSurface } from '../contracts/content/content.interface';
 import type { DocumentViewerHeaderPalette } from '../../ui/components/document-viewer/document-viewer.types';
 export const APP_STATIC_DATA = {

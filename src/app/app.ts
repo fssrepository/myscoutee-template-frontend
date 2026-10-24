@@ -1,5 +1,5 @@
 import { NgComponentOutlet } from '@angular/common';
-import { ChangeDetectorRef, Component, HostListener, OnDestroy, Type, computed, inject, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, ErrorHandler, HostListener, OnDestroy, OnInit, Type, computed, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import {
   NavigationCancel,
   NavigationCancellationCode,
@@ -33,9 +33,10 @@ import { AppUtils } from './shared/core/base/app-utils';
     DialogComponent
   ],
   templateUrl: './app.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './app.scss'
 })
-export class App implements OnDestroy {
+export class App implements OnInit, OnDestroy {
   private static readonly ROUTE_WARMUP_WATCHDOG_DELAY_MS = 6000;
   private static readonly MOBILE_RESUME_RECOVERY_DELAY_MS = 280;
   private static readonly ACTION_WAVE_TARGET_SELECTOR = [
@@ -65,6 +66,7 @@ export class App implements OnDestroy {
   private readonly i18nService = inject(I18nService);
   private readonly appLocationService = inject(AppLocationService);
   private readonly deploymentConfiguration = inject(DeploymentConfigurationService);
+  private readonly initializationErrors = inject(ErrorHandler);
   private readonly routerEventsSubscription: Subscription;
   private routeWarmupHideTimer: ReturnType<typeof setTimeout> | null = null;
   private routeWarmupWatchdogTimer: ReturnType<typeof setTimeout> | null = null;
@@ -94,10 +96,6 @@ export class App implements OnDestroy {
 
   constructor() {
     const initialRouteUrl = this.resolveInitialRouteUrl();
-    this.i18nService.initialize();
-    this.appLocationService.initialize();
-    void this.deploymentConfiguration.initialize();
-    void this.pwaService.initialize();
     this.syncSideMenuVisibility(initialRouteUrl);
     // Bootstrap can finish before the initial page is ready. Keep the loading
     // surface until the outlet activates, including a fresh unsigned visit.
@@ -138,6 +136,15 @@ export class App implements OnDestroy {
         this.completeInitialLandingWarmup(0);
       }
     });
+  }
+
+  ngOnInit(): void {
+    this.appLocationService.initialize();
+    void Promise.all([
+      this.i18nService.initialize(),
+      this.deploymentConfiguration.initialize(),
+      this.pwaService.initialize()
+    ]).catch(error => this.initializationErrors.handleError(error));
   }
 
   ngOnDestroy(): void {

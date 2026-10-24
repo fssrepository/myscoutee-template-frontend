@@ -1,5 +1,5 @@
 import { ExplanationLauncherComponent } from '../../../shared/ui/components/explanation-popup/explanation-launcher.component';
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { IntegrationService } from '../../../shared/core/base/services/integrations/integration.service';
 import type { McpAuthorizationContext, McpAuthorizationRequest } from '../../../shared/core/contracts/integrations/integration.interface';
@@ -16,6 +16,7 @@ import { MatIconModule } from '@angular/material/icon';
 @Component({
   standalone: true, imports: [ExplanationLauncherComponent, PopupComponent, AppMenuComponent, I18nPipe, MatIconModule],
   styleUrl: './mcp-authorization.component.scss',
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `<app-popup [model]="model()" guideContext="profile.mcp-authorization">
     <div class="authorization-body">
     @if (context(); as value) {
@@ -39,7 +40,7 @@ import { MatIconModule } from '@angular/material/icon';
     </div>
   </app-popup><app-explanation-launcher/>`
 })
-export class McpAuthorizationComponent {
+export class McpAuthorizationComponent implements OnInit {
   private readonly api = inject(IntegrationService);
   private readonly router = inject(Router);
   private readonly query = inject(ActivatedRoute).snapshot.queryParamMap;
@@ -52,7 +53,8 @@ export class McpAuthorizationComponent {
     responseType: this.query.get('response_type') ?? '', codeChallenge: this.query.get('code_challenge') ?? '',
     codeChallengeMethod: this.query.get('code_challenge_method') ?? '', state: this.query.get('state')
   };
-  async ngOnInit(): Promise<void> {
+  ngOnInit(): void { void this.loadAuthorization(); }
+  private async loadAuthorization(): Promise<void> {
     if (this.query.keys.some(key => this.query.getAll(key).length !== 1)) { this.error.set('mcp.authorization.failed'); return; }
     try { this.context.set(await this.api.mcpAuthorization(this.request)); }
     catch { this.error.set('mcp.authorization.failed'); }

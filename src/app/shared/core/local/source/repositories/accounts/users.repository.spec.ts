@@ -23,7 +23,17 @@ describe('minimal local profile persistence', () => {
     repository = TestBed.inject(LocalUsersRepository);
   });
 
-  afterEach(() => TestBed.resetTestingModule());
+  afterEach(() => { vi.restoreAllMocks(); TestBed.resetTestingModule(); });
+
+  it('retains the stored partition when another save omits it', () => {
+    const saved = repository.upsertUser({ ...new UserDto(), id: 'new-local-account', partitionKey: 'country:gb',
+      locationCoordinates: { latitude: 51.5074, longitude: -0.1278 } });
+    expect(saved.partitionKey).toBe('country:gb');
+    expect(saved.locationCoordinates).toEqual({ latitude: 51.5074, longitude: -0.1278 });
+    const edited = repository.upsertUser({ ...saved, name: 'Updated', partitionKey: undefined });
+    expect(edited.partitionKey).toBe('country:gb');
+    expect(repository.queryUserById(saved.id)?.partitionKey).toBe('country:gb');
+  });
 
   it('preserves fields omitted by a small profile form and the private device records', () => {
     const original = {

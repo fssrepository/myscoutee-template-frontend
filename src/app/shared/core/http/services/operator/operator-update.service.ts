@@ -1,3 +1,5 @@
+import { operatorRequestOptions, requireOperatorResponse } from './operator-request';
+import { AppUtils } from '../../../base/app-utils';
 import {HttpClient,HttpErrorResponse,HttpHeaders,HttpParams} from '@angular/common/http';
 import {Injectable,inject} from '@angular/core';
 import {environment} from '../../../../../../environments/environment';
@@ -8,7 +10,6 @@ const OPERATOR_NETWORK_ROUTE = '/operator';
 
 const OPERATOR_UPDATES_ROUTE = '/operator/updates';
 
-const DEMO_OPERATOR_USER_HEADER = 'X-Demo-User-Id';
 
 const UPDATE_POLL_INTERVAL_MS = 750;
 
@@ -114,7 +115,7 @@ export class HttpOperatorUpdateService {
 
   private readonly routeDelay = inject(RouteDelayService);
 
-  private readonly apiBaseUrl = (environment.apiBaseUrl ?? '/api').replace(/\/+$/, '');
+  private readonly apiBaseUrl = AppUtils.trimEndCharacters((environment.apiBaseUrl ?? '/api'), "/");
 
   private readonly operatorEndpoint = `${this.apiBaseUrl}${OPERATOR_NETWORK_ROUTE}`;
 
@@ -436,30 +437,8 @@ export class HttpOperatorUpdateService {
     return new Promise(resolve => setTimeout(resolve, UPDATE_POLL_INTERVAL_MS));
   }
 
-  private requestOptions(params?: HttpParams): { headers?: HttpHeaders; params?: HttpParams } {
-    const session = this.sessionService.currentSession();
-    const options: { headers?: HttpHeaders; params?: HttpParams } = {};
-    if (session?.kind === 'demo') {
-      options.headers = new HttpHeaders({
-        [DEMO_OPERATOR_USER_HEADER]: session.userId.trim()
-      });
-    }
-    if (params) {
-      options.params = params;
-    }
-    return options;
-  }
+  private requestOptions(params?: HttpParams): { headers?: HttpHeaders; params?: HttpParams } { return operatorRequestOptions(this.sessionService.currentSession(), params); }
 
-  private async requireResponse<T>(route: string, task: Promise<T | undefined>): Promise<T> {
-    const response = await this.routeDelay.withRequestTimeout(
-      route,
-      task,
-      'operator.request.timeout'
-    );
-    if (!response) {
-      throw new Error('operator.registration.error.response.unavailable');
-    }
-    return response;
-  }
+  private async requireResponse<T>(route: string, task: Promise<T | undefined>): Promise<T> { return requireOperatorResponse(this.routeDelay, route, task); }
 
 }

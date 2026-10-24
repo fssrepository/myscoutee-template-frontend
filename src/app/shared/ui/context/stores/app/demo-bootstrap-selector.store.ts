@@ -1,3 +1,5 @@
+import { preloadAdapterMode } from '../../../../core/base/adapter-loaders';
+import { environment } from '../../../../../../environments/environment';
 import {
   Injectable,
   Type,
@@ -103,7 +105,10 @@ export class DemoBootstrapSelectorStore {
     if (this.demoBootstrapSelectorComponentRef()) {
       return;
     }
-    const module = await import('../../../components/demo-bootstrap-selector/demo-bootstrap-selector.component');
+    const [module] = await Promise.all([
+      import('../../../components/demo-bootstrap-selector/demo-bootstrap-selector.component'),
+      preloadAdapterMode(environment.activitiesDataSource)
+    ]);
     this.demoBootstrapSelectorComponentRef.set(module.DemoBootstrapSelectorComponent);
   }
 }

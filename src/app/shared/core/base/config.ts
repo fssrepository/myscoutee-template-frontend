@@ -1,3 +1,4 @@
+import { AppUtils } from './app-utils';
 export interface RouteConfigEntry {
   routePrefix: string;
   demoDelayMs?: number;
@@ -31,31 +32,21 @@ export interface ResolvedRouteConfig {
   http: boolean;
 }
 
+function demoRoutes(...routePrefixes: string[]): RouteConfigEntry[] {
+  return routePrefixes.map(routePrefix => ({ routePrefix, demoDelayMs: 1500 }));
+}
+
 export const ROUTE_CONFIG: RouteConfig = {
   defaultDemoDelayMs: 1500,
   defaultRequestTimeoutMs: 3000,
   defaultIntervalMs: 0,
   entries: [
-    {
-      routePrefix: '/auth/demo-users',
-      demoDelayMs: 1500
-    },
-    {
-      routePrefix: '/auth/me',
-      demoDelayMs: 1500
-    },
+    ...demoRoutes('/auth/demo-users', '/auth/me'),
     {
       routePrefix: '/auth/me/onboarding-draft-autosave',
       intervalMs: 30000
     },
-    {
-      routePrefix: '/auth/me/feedback',
-      demoDelayMs: 1500
-    },
-    {
-      routePrefix: '/auth/me/experiences',
-      demoDelayMs: 1500
-    },
+    ...demoRoutes('/auth/me/feedback', '/auth/me/experiences'),
     {
       routePrefix: '/auth/me/preferences',
       demoDelayMs: 1500
@@ -70,50 +61,22 @@ export const ROUTE_CONFIG: RouteConfig = {
       intervalMs: 30000,
       demoIntervalMs: 10000
     },
-    {
-      routePrefix: '/auth/me/logout',
-      demoDelayMs: 1500
-    },
-    {
-      routePrefix: '/auth/me/delete',
-      demoDelayMs: 1500
-    },
+    ...demoRoutes('/auth/me/logout', '/auth/me/delete'),
     {
       routePrefix: '/help',
       demoDelayMs: 1500
     },
-    {
-      routePrefix: '/help/active',
-      demoDelayMs: 1500
-    },
-    {
-      routePrefix: '/privacy',
-      demoDelayMs: 1500
-    },
+    ...demoRoutes('/help/active', '/privacy'),
     {
       routePrefix: '/privacy/active',
       demoDelayMs: 1500
     },
-    {
-      routePrefix: '/privacy/consents',
-      demoDelayMs: 1500
-    },
-    {
-      routePrefix: '/terms',
-      demoDelayMs: 1500
-    },
+    ...demoRoutes('/privacy/consents', '/terms'),
     {
       routePrefix: '/terms/active',
       demoDelayMs: 1500
     },
-    {
-      routePrefix: '/explanation',
-      demoDelayMs: 1500
-    },
-    {
-      routePrefix: '/explanation/active',
-      demoDelayMs: 1500
-    },
+    ...demoRoutes('/explanation', '/explanation/active'),
     {
       routePrefix: '/notifications',
       demoDelayMs: 1500,
@@ -180,7 +143,7 @@ function normalizeRouteUrl(url: string): string {
   if (!trimmed || trimmed === '/') {
     return '/';
   }
-  return trimmed.startsWith('/') ? trimmed.replace(/\/+$/, '') : `/${trimmed}`.replace(/\/+$/, '');
+  return trimmed.startsWith('/') ? AppUtils.trimEndCharacters(trimmed, "/") : AppUtils.trimEndCharacters(`/${trimmed}`, "/");
 }
 
 function isRoutePrefixMatch(url: string, prefix: string): boolean {

@@ -2,7 +2,7 @@ import { APP_STATIC_DATA } from '../../../shared/core/common/app-static-data';
 import type { ProfileStatus } from '../../../shared/core/common/constants';
 import { ProfileHeaderCardConverter } from '../../../shared/ui/converters/profile/profile-header-card.converter';
 import { IntegrationSettingsPopupComponent } from '../integration-settings-popup/integration-settings-popup.component';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AppMenuComponent, FormFlowComponent, HeaderCardComponent, ImageCarouselComponent, PopupComponent, type AppMenuItemSelectEvent, type AppMenuPalette, type HeaderCardModel, type FormFlowModel, type PopupModel } from '@fssrepository/myscoutee-components';
 import { ProfileEditorStore } from '../../../shared/ui/context/stores/profile/profile-editor.store';
@@ -13,6 +13,7 @@ import { I18nService } from '../../../shared/core/base/services/localization/i18
   selector: 'app-profile-editor', standalone: true,
   imports: [IntegrationSettingsPopupComponent, FormsModule, AppMenuComponent, FormFlowComponent, HeaderCardComponent, ImageCarouselComponent, PopupComponent],
   templateUrl: './profile-editor.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './profile-editor.component.scss'
 })
 export class ProfileEditorComponent {

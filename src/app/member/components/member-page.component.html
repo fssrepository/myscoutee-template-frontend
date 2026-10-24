@@ -40,22 +40,7 @@
   @if (page() === 'chat') { <app-template-chat (closed)="changePage(null)"/> }
   @else { <app-popup [model]="pagePopup()"><app-showcase/></app-popup> }
 }
-@if (editor.open() && !editor.component()) {
-  <app-popup [model]="editor.loadingModel">
-    <div class="profile-editor-loading" role="status" [attr.aria-busy]="!editor.loadFailed()">
-      @if (editor.loadFailed()) {
-        <mat-icon>error_outline</mat-icon>
-        <button type="button" (click)="editor.ensureLoaded()">{{ 'try.again' | i18n }}</button>
-      } @else {
-        <app-indicator kind="spinner-ring" state="loading" />
-        <span>{{ 'loading.profile' | i18n: 'Loading profile' }}</span>
-      }
-    </div>
-  </app-popup>
-}
-@if (editor.open() && editor.component(); as profileComponent) {
-  <ng-container *ngComponentOutlet="profileComponent" />
-}
+<app-profile-editor-host />
 @defer (when profile.settingsPopup()) { <app-profile-settings-popups/> }
 @defer (when notifications.isOpen()) { @if (notifications.isOpen()) { <app-notification-center-popup/> } }
 @if (profiles.activeUserId() && (notificationAttentionVisible() || guide.launcherVisible())) {

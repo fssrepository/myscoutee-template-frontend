@@ -1,3 +1,4 @@
+import { AppUtils } from '../../../../base/app-utils';
 import { Injectable, inject } from '@angular/core';
 import { LocalMemoryDb } from '../../../../common/app.db';
 import type { SampleCardDto } from '../../../../contracts/showcase/showcase.interface';
@@ -8,7 +9,7 @@ export class LocalShowcaseRepository {
   async queryPage(page: number, pageSize: number): Promise<PageResult<SampleCardDto>> {
     await this.db.whenReady();
     const table = this.db.read().sampleCards;
-    const ids = [...table.ids].sort();
+    const ids = [...table.ids].sort(AppUtils.compareCodeUnits);
     return { items: ids.slice(page * pageSize, (page + 1) * pageSize).map(id => structuredClone(table.byId[id])), total: ids.length };
   }
 }

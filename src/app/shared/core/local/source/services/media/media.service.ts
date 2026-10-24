@@ -1,3 +1,4 @@
+import { AppUtils } from '../../../../base/app-utils';
 import { Injectable, inject } from '@angular/core';
 import { LocalMediaRepository } from '../../repositories/media/media.repository';
 import { LocalRouteDelayService } from '../platform/route-delay.service';
@@ -125,10 +126,9 @@ export class LocalMediaService extends LocalRouteDelayService {
   }
 
   private localFileName(value: string, fallback: string, extension: string): string {
-    const normalizedValue = value
+    const normalizedValue = AppUtils.trimCharacters(value
       .trim()
-      .replace(/[^a-zA-Z0-9._-]+/g, '-')
-      .replace(/^-+|-+$/g, '');
+      .replace(/[^a-zA-Z0-9._-]+/g, '-'), "-");
     return `${normalizedValue || fallback}.${extension}`;
   }
 }
