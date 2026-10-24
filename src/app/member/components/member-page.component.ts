@@ -126,11 +126,10 @@ export class MemberPageComponent implements OnDestroy {
  protected readonly avatar = computed<readonly AppMenuItem[]>(() => {
   const user = this.profiles.activeUserProfile();
   const session=this.session.session();
-  const bootstrap=session?.kind==='operator-bootstrap'?session:null;
   const status = this.activeUserLoadState().status;
-  const loading = !bootstrap && (status === 'idle' || status === 'loading');
-  const failed = !bootstrap && (status === 'error' || status === 'timeout');
-  const canToggle = !!bootstrap || !!user && !loading && !failed;
+  const loading = (status === 'idle' || status === 'loading');
+  const failed = (status === 'error' || status === 'timeout');
+  const canToggle = !!user && !loading && !failed;
   const label = failed ? this.i18n.translate('game.profile.load.failed.title') : loading ? this.i18n.translate('loading.profile')
    : this.menuOpen() ? this.i18n.translate('menu.user.close.aria') : this.i18n.translate('menu.user.open.aria');
   return [{ id: 'navigator-avatar', kind: 'action', layout: 'image',
@@ -142,7 +141,7 @@ export class MemberPageComponent implements OnDestroy {
  protected readonly header = computed<HeaderCardModel>(() => {
   const user = this.profiles.activeUserProfile();
   const session=this.session.session();
-  if (!user) return { title: session?.kind === 'operator-bootstrap' ? session.email : '', showEdit: false };
+  if (!user) return { title: session?.kind === 'authenticated' ? session.profile.email : '', showEdit: false };
   const operator = this.role === 'operator';
   const model = ProfileHeaderCardConverter.convert(user, {
    admin: this.role === 'admin' || operator,
@@ -184,7 +183,6 @@ export class MemberPageComponent implements OnDestroy {
     ++this.hydrationRequestVersion;
     return;
    }
-   if (session.kind === 'operator-bootstrap') return;
    const userId = session.kind === 'demo' ? session.userId : session.profile.id;
    const requestKey = `${session.kind}:${userId}`;
    if (this.hydrationRequestKey === requestKey) return;
@@ -195,7 +193,7 @@ export class MemberPageComponent implements OnDestroy {
    const session = this.session.session();
    const user = this.profiles.activeUserProfile();
    const revision = this.privacy.activeRevision();
-   if (!session || session.kind === 'operator-bootstrap') {
+   if (!session) {
     this.privacyConsentCheckKey = '';
     ++this.privacyConsentCheckToken;
     untracked(() => this.profile.clearPrivacyConsentRequirement());
@@ -249,7 +247,7 @@ export class MemberPageComponent implements OnDestroy {
   this.profiles.setActiveUserId(userId);
   try {
    const session = this.session.currentSession();
-   const user = await this.users.loadUserById(session?.kind === 'firebase' ? undefined : userId);
+   const user = await this.users.loadUserById(session?.kind === 'authenticated' ? undefined : userId);
    if (!user || requestVersion !== this.hydrationRequestVersion) return;
    this.profiles.setActiveUserProfile(user);
   } catch {

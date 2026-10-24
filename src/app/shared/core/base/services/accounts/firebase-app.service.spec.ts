@@ -43,7 +43,7 @@ describe('FirebaseAppService reconciliation', () => {
           provide: SessionService,
           useValue: {
             currentSession: () => ({
-              kind: 'firebase'
+              kind: 'authenticated'
             }),
             setFirebaseRuntimeAvailable
           }

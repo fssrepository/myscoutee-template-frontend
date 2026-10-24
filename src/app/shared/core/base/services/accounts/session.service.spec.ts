@@ -3,16 +3,15 @@ import { TestBed } from '@angular/core/testing';
 import { environment } from '../../../../../../environments/environment';
 import { APP_STORAGE_KEYS } from '../../../common/storage-scope';
 import type { FirebaseAuthRequestDto } from '../../../contracts/accounts/user.interface';
-import { FirebaseSessionRegistryService } from '../../../http/services/accounts/firebase-session-registry.service';
-import { HttpOperatorBootstrapAuthService } from '../../../http/services/operator/operator-bootstrap-auth.service';
+import { HttpSessionRegistryService } from '../../../http/services/accounts/session-registry.service';
 import { FirebaseAuthService } from './firebase-auth.service';
 import { SessionService } from './session.service';
 
-describe('SessionService operator bootstrap session', () => {
+describe('SessionService account sessions', () => {
   const originalActivitiesDataSource = environment.activitiesDataSource;
   const installerEmail =
     'operator-0123456789abcdef01234567@deployment.invalid';
-  const bootstrapSignIn = vi.fn();
+  const registerPasswordLogin = vi.fn();
   const firebaseSignIn = vi.fn();
   const firebaseRestore = vi.fn();
   const firebaseSignOut = vi.fn();
@@ -20,7 +19,7 @@ describe('SessionService operator bootstrap session', () => {
   const registerLogin = vi.fn();
   const registerDemoLogin = vi.fn();
   const revokeDemoSession = vi.fn();
-  const revokeFirebaseSession = vi.fn();
+  const revokeSession = vi.fn();
 
   beforeEach(() => {
     // Session tests do not start the unrelated asynchronous messaging tree.
@@ -30,18 +29,12 @@ describe('SessionService operator bootstrap session', () => {
     environment.activitiesDataSource = originalActivitiesDataSource;
     localStorage.clear();
     sessionStorage.clear();
-    bootstrapSignIn.mockReset();
+    registerPasswordLogin.mockReset();
     firebaseSignIn.mockReset();
     firebaseRestore.mockReset().mockResolvedValue(null);
     firebaseSignOut.mockReset().mockResolvedValue(undefined);
     firebaseGetIdToken.mockReset().mockResolvedValue('firebase-token');
-    registerLogin.mockReset().mockResolvedValue({
-      accepted: true,
-      existingSession: false,
-      outcome: 'ACCEPTED',
-      activeSessionCount: 1,
-      maxActiveSessions: 2
-    });
+    registerLogin.mockReset().mockImplementation((sessionId: string) => Promise.resolve(loginResponse(sessionId)));
     registerDemoLogin.mockReset().mockResolvedValue({
       accepted: true,
       existingSession: false,
@@ -50,14 +43,10 @@ describe('SessionService operator bootstrap session', () => {
       maxActiveSessions: 2
     });
     revokeDemoSession.mockReset().mockResolvedValue(undefined);
-    revokeFirebaseSession.mockReset().mockResolvedValue(undefined);
+    revokeSession.mockReset().mockResolvedValue(undefined);
     TestBed.configureTestingModule({
       providers: [
         SessionService,
-        {
-          provide: HttpOperatorBootstrapAuthService,
-          useValue: { signIn: bootstrapSignIn }
-        },
         {
           provide: FirebaseAuthService,
           useValue: {
@@ -68,12 +57,13 @@ describe('SessionService operator bootstrap session', () => {
           }
         },
         {
-          provide: FirebaseSessionRegistryService,
+          provide: HttpSessionRegistryService,
           useValue: {
             registerLogin,
+            registerPasswordLogin,
             registerDemoLogin,
             revokeDemoSession,
-            revokeFirebaseSession
+            revokeSession
           }
         }
       ]
@@ -89,14 +79,14 @@ describe('SessionService operator bootstrap session', () => {
   });
 
   it('persists only the current Firebase session avatar preview and restores it', () => {
-    const session = { kind: 'firebase', sessionId: 'current-session', profile: {
+    const session = { kind: 'authenticated', accessToken: 'app-token', expiresAt: '2099-07-29T12:00:00Z', sessionId: 'current-session', profile: {
       id: 'firebase-user', name: 'User', email: 'user@example.test', initials: 'U'
     } };
     localStorage.setItem(APP_STORAGE_KEYS.session, JSON.stringify(session));
     const service = TestBed.inject(SessionService);
-    service.setFirebaseAvatarPreview('old-session', '/wrong.webp');
+    service.setSessionAvatarPreview('old-session', '/wrong.webp');
     expect(service.currentSession()).not.toHaveProperty('avatarImageUrl', '/wrong.webp');
-    service.setFirebaseAvatarPreview('current-session', '/correct.webp');
+    service.setSessionAvatarPreview('current-session', '/correct.webp');
     expect(service.currentSession()).toMatchObject({ avatarImageUrl: '/correct.webp' });
     expect(JSON.parse(localStorage.getItem(APP_STORAGE_KEYS.session)!)).toMatchObject({ avatarImageUrl: '/correct.webp' });
     expect((service as unknown as { loadStoredSession(): unknown }).loadStoredSession())
@@ -105,222 +95,107 @@ describe('SessionService operator bootstrap session', () => {
   });
 
   it('keeps image bytes across restoration but rejects stale session/source results and clears changed photos', () => {
-    localStorage.setItem(APP_STORAGE_KEYS.session, JSON.stringify({ kind: 'firebase', sessionId: 'current',
+    localStorage.setItem(APP_STORAGE_KEYS.session, JSON.stringify({ kind: 'authenticated', accessToken: 'app-token', expiresAt: '2099-07-29T12:00:00Z', sessionId: 'current',
       profile: { id: 'firebase-user', name: 'User', email: 'user@example.test', initials: 'U' }, avatarImageUrl: '/photo.webp' }));
     const service = TestBed.inject(SessionService);
     const preview = 'data:image/webp;base64,UklGRg==';
-    service.setFirebaseAvatarPreviewData('old', '/photo.webp', preview);
-    service.setFirebaseAvatarPreviewData('current', '/old.webp', preview);
+    service.setSessionAvatarPreviewData('old', '/photo.webp', preview);
+    service.setSessionAvatarPreviewData('current', '/old.webp', preview);
     expect(service.currentSession()).not.toHaveProperty('avatarImageDataUrl', preview);
-    service.setFirebaseAvatarPreviewData('current', '/photo.webp', preview);
-    service.setFirebaseAvatarPreview('current', '/photo.webp');
+    service.setSessionAvatarPreviewData('current', '/photo.webp', preview);
+    service.setSessionAvatarPreview('current', '/photo.webp');
     expect((service as unknown as { loadStoredSession(): unknown }).loadStoredSession())
       .toMatchObject({ avatarImageDataUrl: preview });
-    service.setFirebaseAvatarPreview('current', '');
+    service.setSessionAvatarPreview('current', '');
     expect(service.currentSession()).toHaveProperty('avatarImageDataUrl', undefined);
-    service.setFirebaseAvatarPreviewData('current', '/photo.webp', preview);
+    service.setSessionAvatarPreviewData('current', '/photo.webp', preview);
     expect(service.currentSession()).toHaveProperty('avatarImageDataUrl', undefined);
   });
 
   it.each(['data:image/svg+xml;base64,PHN2Zz4=', 'data:image/webp;base64,' + 'A'.repeat(90000)])(
     'rejects unsafe or oversized stored avatar data', data => {
-      localStorage.setItem(APP_STORAGE_KEYS.session, JSON.stringify({ kind: 'firebase', sessionId: 'current',
+      localStorage.setItem(APP_STORAGE_KEYS.session, JSON.stringify({ kind: 'authenticated', accessToken: 'app-token', expiresAt: '2099-07-29T12:00:00Z', sessionId: 'current',
         profile: { id: 'firebase-user', name: 'User', email: 'user@example.test', initials: 'U' },
         avatarImageUrl: '/photo.webp', avatarImageDataUrl: data }));
       expect(TestBed.inject(SessionService).currentSession()).toHaveProperty('avatarImageDataUrl', undefined);
     });
 
-  it('stores only the short-lived bootstrap token in session storage', async () => {
-    bootstrapSignIn.mockResolvedValue(validBootstrapResponse());
+  it('exchanges a password proof for the shared account session without persisting the password', async () => {
+    registerPasswordLogin.mockResolvedValue(loginResponse('session:password'));
     const service = TestBed.inject(SessionService);
-
-    await expect(service.startAuthSession(emailSignInRequest()))
-      .resolves.toEqual({
-        kind: 'operator-bootstrap',
-        email: installerEmail,
-        expiresAt: '2099-07-29T12:00:00Z'
-      });
-
-    expect(service.getOperatorBootstrapToken()).toBe('signed-token');
-    expect(localStorage.getItem(APP_STORAGE_KEYS.session)).toBeNull();
-    expect(sessionStorage.getItem(APP_STORAGE_KEYS.operatorBootstrapToken))
-      .toBe('signed-token');
-    expect([
-      localStorage.getItem(APP_STORAGE_KEYS.session),
-      sessionStorage.getItem(APP_STORAGE_KEYS.operatorBootstrapSession),
-      sessionStorage.getItem(APP_STORAGE_KEYS.operatorBootstrapToken)
-    ].join('|')).not.toContain('installer-password');
-    expect(bootstrapSignIn).toHaveBeenCalledWith({
-      email: installerEmail,
-      password: 'installer-password'
+    await expect(service.startAuthSession(emailSignInRequest())).resolves.toMatchObject({
+      kind: 'authenticated', profile: { id: 'account-user' }, accessToken: 'app-token'
     });
+    expect(await service.getAccessToken()).toBe('app-token');
+    expect(localStorage.getItem(APP_STORAGE_KEYS.session)).not.toContain('installer-password');
+    expect(registerPasswordLogin).toHaveBeenCalledWith(expect.stringMatching(/^session:/),
+      expect.objectContaining({ email: installerEmail, password: 'installer-password' }));
     expect(firebaseSignIn).not.toHaveBeenCalled();
   });
 
-  it('falls through to Firebase only when bootstrap is not applicable', async () => {
-    bootstrapSignIn.mockRejectedValue({ status: 404 });
-    firebaseSignIn.mockResolvedValue({
-      profile: {
-        id: 'firebase-user',
-        name: 'Firebase User',
-        email: installerEmail,
-        initials: 'FU'
-      }
-    });
-
-    await expect(TestBed.inject(SessionService).startAuthSession(emailSignInRequest()))
-      .resolves.toMatchObject({ kind: 'firebase' });
-    expect(bootstrapSignIn).toHaveBeenCalledWith({
-      email: installerEmail,
-      password: 'installer-password'
-    });
-    expect(firebaseSignIn).toHaveBeenCalledWith(emailSignInRequest());
-  });
-
-  it.each([
-    [401, 'operator.bootstrap.auth.invalid'],
-    [429, 'operator.bootstrap.auth.throttled'],
-    [500, 'operator.bootstrap.auth.failed']
-  ])('does not fall through to Firebase after HTTP %s', async (status, notice) => {
-    bootstrapSignIn.mockRejectedValue({ status });
+  it('exchanges Firebase identity proof for the same canonical account session', async () => {
+    firebaseSignIn.mockResolvedValue({ profile: { id: 'provider-uid', name: 'Provider', email: installerEmail, initials: 'P' } });
     const service = TestBed.inject(SessionService);
-
-    await expect(service.startAuthSession(emailSignInRequest())).resolves.toBeNull();
-
-    expect(service.firebaseNotice()).toBe(notice);
-    expect(firebaseSignIn).not.toHaveBeenCalled();
+    await expect(service.startAuthSession({ provider: 'google' })).resolves.toMatchObject({
+      kind: 'authenticated', profile: { id: 'account-user' }, accessToken: 'app-token'
+    });
+    expect(registerLogin).toHaveBeenCalledWith(expect.any(String), 'firebase-token', expect.objectContaining({ provider: 'google' }));
+    expect(await service.getAccessToken()).toBe('app-token');
+    expect(firebaseGetIdToken).toHaveBeenCalledOnce();
   });
 
-  it('sends an ordinary email sign-in directly to Firebase without contacting Java', async () => {
+  it('tries the available password proof for ordinary emails and falls back only when inapplicable', async () => {
+    registerPasswordLogin.mockRejectedValue({ status: 404 });
     firebaseSignIn.mockResolvedValue({ profile: null });
-    const request: FirebaseAuthRequestDto = {
-      provider: 'email',
-      emailMode: 'sign-in',
-      email: 'member@example.test',
-      password: 'firebase-password'
-    };
-
+    const request = { ...emailSignInRequest(), email: 'member@example.test' };
     await TestBed.inject(SessionService).startAuthSession(request);
-
-    expect(bootstrapSignIn).not.toHaveBeenCalled();
+    expect(registerPasswordLogin).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ email: request.email }));
     expect(firebaseSignIn).toHaveBeenCalledWith(request);
   });
 
-  it('keeps create-account and social-provider requests Firebase-only', async () => {
-    firebaseSignIn.mockResolvedValue({ profile: null });
+  it.each([401, 429, 500])('does not fall through after a rejected password proof (%s)', async status => {
+    registerPasswordLogin.mockRejectedValue({ status });
     const service = TestBed.inject(SessionService);
-    const createRequest: FirebaseAuthRequestDto = {
-      provider: 'email',
-      emailMode: 'create',
-      email: 'operator@example.test',
-      password: 'firebase-password'
-    };
-
-    await service.startAuthSession(createRequest);
-    await service.startAuthSession({ provider: 'google' });
-
-    expect(bootstrapSignIn).not.toHaveBeenCalled();
-    expect(firebaseSignIn).toHaveBeenNthCalledWith(1, createRequest);
-    expect(firebaseSignIn).toHaveBeenNthCalledWith(2, { provider: 'google' });
+    await expect(service.startAuthSession(emailSignInRequest())).resolves.toBeNull();
+    expect(firebaseSignIn).not.toHaveBeenCalled();
+    expect(service.authNotice()).toBe(status === 429 ? 'auth.session.login.throttled' : 'auth.session.login.failed');
   });
 
-  it('clears an expired restored token without initializing Firebase', async () => {
-    sessionStorage.setItem(APP_STORAGE_KEYS.operatorBootstrapSession, JSON.stringify({
-      kind: 'operator-bootstrap',
-      email: installerEmail,
-      expiresAt: '2020-01-01T00:00:00Z'
-    }));
-    sessionStorage.setItem(APP_STORAGE_KEYS.operatorBootstrapToken, 'expired-token');
-
+  it('keeps a valid account session online and offline without reloading the identity provider', async () => {
+    localStorage.setItem(APP_STORAGE_KEYS.session, JSON.stringify({ kind: 'authenticated', ...loginResponse('persisted').session }));
     const service = TestBed.inject(SessionService);
+    await expect(service.ensureSession()).resolves.toMatchObject({ sessionId: 'persisted' });
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+    await expect(service.ensureSession()).resolves.toMatchObject({ sessionId: 'persisted' });
+    expect(firebaseRestore).not.toHaveBeenCalled();
+    expect(registerLogin).not.toHaveBeenCalled();
+  });
 
-    await expect(service.ensureSession()).resolves.toBeNull();
-    expect(sessionStorage.getItem(APP_STORAGE_KEYS.operatorBootstrapToken)).toBeNull();
+  it('rejects expired stored sessions regardless of login method', async () => {
+    localStorage.setItem(APP_STORAGE_KEYS.session, JSON.stringify({ kind: 'authenticated',
+      ...loginResponse('expired').session, expiresAt: '2020-01-01T00:00:00Z' }));
+    await expect(TestBed.inject(SessionService).ensureSession()).resolves.toBeNull();
     expect(firebaseRestore).not.toHaveBeenCalled();
   });
 
-  it('keeps a persisted Firebase session while the warmed client is offline', async () => {
-    const offline = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
-    localStorage.setItem(APP_STORAGE_KEYS.session, JSON.stringify({
-      kind: 'firebase',
-      sessionId: 'session:persisted-offline',
-      profile: {
-        id: 'firebase-user',
-        name: 'Firebase User',
-        email: 'firebase@example.com',
-        initials: 'FU'
-      }
-    }));
-
-    try {
-      await expect(TestBed.inject(SessionService).ensureSession()).resolves.toMatchObject({
-        kind: 'firebase',
-        profile: { id: 'firebase-user' }
-      });
-      expect(firebaseRestore).not.toHaveBeenCalled();
-    } finally {
-      offline.mockRestore();
-    }
-  });
-
-  it.each(['ensureSession', 'restoreFirebaseSession'] as const)(
-    'retains the warmed session during temporary Firebase failure in %s and verifies it on recovery', async method => {
-      const session = { kind: 'firebase', sessionId: 'persisted-transport-session', profile: {
-        id: 'firebase-user', name: 'Firebase User', email: 'firebase@example.com', initials: 'FU'
-      } };
-      localStorage.setItem(APP_STORAGE_KEYS.session, JSON.stringify(session));
-      firebaseRestore.mockRejectedValueOnce(Object.assign(new Error('Network unavailable'), {
-        code: 'auth/network-request-failed'
-      }));
-      const service = TestBed.inject(SessionService);
-      await expect(service[method]()).resolves.toMatchObject(session);
-      expect(JSON.parse(localStorage.getItem(APP_STORAGE_KEYS.session)!)).toMatchObject(session);
-      expect(registerLogin).not.toHaveBeenCalled();
-
-      firebaseRestore.mockResolvedValueOnce(session.profile);
-      await expect(service.ensureSession()).resolves.toMatchObject(session);
-      expect(firebaseRestore).toHaveBeenCalledTimes(2);
-      expect(registerLogin).not.toHaveBeenCalled();
-    });
-
-  it('clears a persisted session after a definitive missing Firebase identity', async () => {
-    localStorage.setItem(APP_STORAGE_KEYS.session, JSON.stringify({ kind: 'firebase',
-      sessionId: 'invalid-session', profile: { id: 'old', name: 'Old', email: 'old@example.test', initials: 'O' }
-    }));
-    firebaseRestore.mockResolvedValueOnce(null);
-    await expect(TestBed.inject(SessionService).ensureSession()).resolves.toBeNull();
+  it('ignores a late rejection belonging to a previous session', () => {
+    localStorage.setItem(APP_STORAGE_KEYS.session, JSON.stringify({ kind: 'authenticated', ...loginResponse('current').session }));
+    const service = TestBed.inject(SessionService);
+    expect(service.rejectSession('old')).toBe(false);
+    expect(service.currentSession()).not.toBeNull();
+    expect(service.rejectSession('current')).toBe(true);
+    expect(service.currentSession()).toBeNull();
     expect(localStorage.getItem(APP_STORAGE_KEYS.session)).toBeNull();
   });
 
-  it('reuses the persisted Firebase session when the same device restores the same user', async () => {
-    localStorage.setItem(APP_STORAGE_KEYS.session, JSON.stringify({
-      kind: 'firebase',
-      sessionId: 'session:persisted-device',
-      profile: {
-        id: 'firebase-user',
-        name: 'Firebase User',
-        email: 'firebase@example.com',
-        initials: 'FU'
-      }
-    }));
-    firebaseRestore.mockResolvedValue({
-      id: 'firebase-user',
-      name: 'Firebase User',
-      email: 'firebase@example.com',
-      initials: 'FU'
-    });
+  it('revokes the common credential on logout without consulting the identity provider', async () => {
+    environment.activitiesDataSource = 'http';
+    localStorage.setItem(APP_STORAGE_KEYS.session, JSON.stringify({ kind: 'authenticated', ...loginResponse('current').session }));
     const service = TestBed.inject(SessionService);
-
-    await expect(service.restoreFirebaseSession()).resolves.toMatchObject({
-      kind: 'firebase',
-      sessionId: 'session:persisted-device'
-    });
-
-    expect(registerLogin).toHaveBeenCalledWith(
-      'session:persisted-device',
-      'firebase-token',
-      expect.objectContaining({ provider: 'firebase' })
-    );
+    await service.logout();
+    expect(revokeSession).toHaveBeenCalledWith('current', 'account-user', 'app-token');
+    expect(service.currentSession()).toBeNull();
+    expect(firebaseGetIdToken).not.toHaveBeenCalled();
   });
 
   it('publishes a tracked demo session only after server registration accepts it', async () => {
@@ -424,7 +299,7 @@ describe('SessionService operator bootstrap session', () => {
     await service.logout();
 
     expect(revokeDemoSession).not.toHaveBeenCalled();
-    expect(revokeFirebaseSession).not.toHaveBeenCalled();
+    expect(revokeSession).not.toHaveBeenCalled();
     expect(service.currentSession()).toBeNull();
     expect(localStorage.getItem(APP_STORAGE_KEYS.session)).toBeNull();
   });
@@ -530,17 +405,7 @@ describe('SessionService operator bootstrap session', () => {
     );
   });
 
-  it('clears the bootstrap token on logout', async () => {
-    bootstrapSignIn.mockResolvedValue(validBootstrapResponse());
-    const service = TestBed.inject(SessionService);
-    await service.startAuthSession(emailSignInRequest());
 
-    await service.logout();
-
-    expect(service.currentSession()).toBeNull();
-    expect(sessionStorage.getItem(APP_STORAGE_KEYS.operatorBootstrapToken)).toBeNull();
-    expect(firebaseSignOut).not.toHaveBeenCalled();
-  });
 });
 
 function emailSignInRequest(): FirebaseAuthRequestDto {
@@ -552,11 +417,8 @@ function emailSignInRequest(): FirebaseAuthRequestDto {
   };
 }
 
-function validBootstrapResponse() {
-  return {
-    tokenType: 'OperatorBootstrap' as const,
-    accessToken: 'signed-token',
-    email: 'operator-0123456789abcdef01234567@deployment.invalid',
-    expiresAt: '2099-07-29T12:00:00Z'
-  };
+function loginResponse(sessionId: string) {
+  return { accepted: true, existingSession: false, outcome: 'ACCEPTED', activeSessionCount: 1, maxActiveSessions: 2,
+    session: { sessionId, accessToken: 'app-token', expiresAt: '2099-07-29T12:00:00Z',
+      profile: { id: 'account-user', name: 'Account', email: 'account@example.test', initials: 'A' } } };
 }

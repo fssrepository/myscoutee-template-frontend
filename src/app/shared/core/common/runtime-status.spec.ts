@@ -76,7 +76,7 @@ describe('landing runtime status', () => {
   it('keeps a retained real HTTP identity authoritative over a local demo on reload', async () => {
     snapshot(false);
     vi.stubGlobal('location', { pathname: '/admin', reload: vi.fn() });
-    const real = JSON.stringify({ kind: 'firebase', profile: { id: 'real-user' }, sessionId: 'real-session' });
+    const real = JSON.stringify({ kind: 'authenticated', accessToken: 'app-token', expiresAt: '2099-07-29T12:00:00Z', profile: { id: 'real-user' }, sessionId: 'real-session' });
     localStorage.setItem('myscoutee-template.http.session.v1', real);
     localStorage.setItem('myscoutee-template.demo.session.v1', JSON.stringify({ kind: 'demo', userId: 'selected-local-demo' }));
     await failover.prepareDemoFailover();
@@ -108,7 +108,7 @@ describe('landing runtime status', () => {
     const [httpId] = [...await failover.demoSeedUserIds()][0];
     localStorage.setItem('myscoutee-template.http.session.v1', JSON.stringify({ kind: 'demo', userId: httpId }));
     await failover.prepareDemoFailover();
-    const real = JSON.stringify({ kind: 'firebase', profile: { id: 'real-user' }, sessionId: 'real-session' });
+    const real = JSON.stringify({ kind: 'authenticated', accessToken: 'app-token', expiresAt: '2099-07-29T12:00:00Z', profile: { id: 'real-user' }, sessionId: 'real-session' });
     localStorage.setItem('myscoutee-template.http.session.v1', real);
     failover.endDemoFailoverSession();
     expect(localStorage.getItem('myscoutee-template.http.session.v1')).toBe(real);
@@ -143,7 +143,7 @@ describe('landing runtime status', () => {
     await failover.prepareDemoFailover();
     expect(fetchStatus).not.toHaveBeenCalled();
     mode.activitiesDataSource = 'http';
-    const real = JSON.stringify({ kind: 'firebase', profile: { id: 'real-user' }, sessionId: 'real-session' });
+    const real = JSON.stringify({ kind: 'authenticated', accessToken: 'app-token', expiresAt: '2099-07-29T12:00:00Z', profile: { id: 'real-user' }, sessionId: 'real-session' });
     localStorage.setItem('myscoutee-template.http.session.v1', real);
     fetchStatus.mockImplementation(async () => response(false));
     await failover.prepareDemoFailover();

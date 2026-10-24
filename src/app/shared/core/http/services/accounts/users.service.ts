@@ -115,7 +115,7 @@ export class HttpUsersService implements UserService {
   async queryUserById(userId?: string, requestTimeoutMs?: number): Promise<UserByIdQueryResponse> {
     const normalizedUserId = userId?.trim() ?? '';
     const session = this.session.currentSession();
-    const cacheUserId = session?.kind === 'firebase' ? session.profile.id : '';
+    const cacheUserId = session?.kind === 'authenticated' ? session.profile.id : '';
     try {
       const user = await this.routeDelay.withRequestTimeout(HttpUsersService.USER_BY_ID_ROUTE, this.http.get<UserDto | null>(
         this.apiBaseUrl + HttpUsersService.USER_BY_ID_ROUTE, { params: normalizedUserId ? { userId: normalizedUserId } : {} }
@@ -125,6 +125,7 @@ export class HttpUsersService implements UserService {
       return response;
     } catch (error) {
       const status = (error as { status?: number } | null)?.status;
+      if (status === 401 || status === 403) throw error;
       if (cacheUserId && ([0, 502, 503, 504].includes(status ?? -1)
         || this.isTimeoutError(error, 'User details request timeout.'))) {
         const cached = this.offlineCache.readUser(normalizedUserId || cacheUserId);

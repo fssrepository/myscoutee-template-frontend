@@ -15,7 +15,6 @@ const sessionGuard: CanActivateFn = async (route, state) => {
  try {
   const session = await sessionService.ensureSession();
   if (!session) return entry();
-  if (session.kind === 'operator-bootstrap') return route.data['role'] === 'operator' ? true : router.createUrlTree(['/operator']);
   if (users.localModeEnabled) {
    const { SeedDemoBootstrapService } = await import('./shared/core/local/seed/services/platform/demo-bootstrap.service');
    await injector.get(SeedDemoBootstrapService).ensureDemoSelectorReady('union');

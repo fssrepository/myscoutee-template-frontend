@@ -3,7 +3,7 @@ import { endDemoFailoverSession, prewarmDemoFailover } from '../../../common/dem
 import { Injectable, Injector, computed, inject, signal } from '@angular/core';
 
 import { environment } from '../../../../../../environments/environment';
-import type { FirebaseAuthProfileDto, FirebaseAuthRequestDto } from '../../../contracts/accounts/user.interface';
+import type { AccountAuthProfileDto, FirebaseAuthRequestDto } from '../../../contracts/accounts/user.interface';
 import type { AuthMode } from '../../../common/constants';
 import { APP_STORAGE_KEYS } from '../../../common/storage-scope';
 import { secureRandomUuid } from '../../../common/secure-random';
@@ -13,10 +13,8 @@ import {
 } from '../../../common/firebase-login-mode';
 
 type FirebaseAuthServiceInstance = import('./firebase-auth.service').FirebaseAuthService;
-type HttpOperatorBootstrapAuthServiceInstance =
-  import('../../../http/services/operator/operator-bootstrap-auth.service').HttpOperatorBootstrapAuthService;
-type FirebaseSessionRegistryServiceInstance =
-  import('../../../http/services/accounts/firebase-session-registry.service').FirebaseSessionRegistryService;
+type HttpSessionRegistryServiceInstance =
+  import('../../../http/services/accounts/session-registry.service').HttpSessionRegistryService;
 
 export interface SupportSessionContext {
   kind: 'admin-support';
@@ -34,49 +32,41 @@ function avatarPreviewDataUrl(value: unknown): string | undefined {
 
 export type AppSession =
   | { kind: 'demo'; userId: string; sessionId?: string; supportContext?: SupportSessionContext }
-  | { kind: 'firebase'; profile: FirebaseAuthProfileDto; sessionId: string; avatarImageUrl?: string; avatarImageDataUrl?: string }
-  | { kind: 'operator-bootstrap'; email: string; expiresAt: string };
+  | { kind: 'authenticated'; profile: AccountAuthProfileDto; sessionId: string; accessToken: string; expiresAt: string; avatarImageUrl?: string; avatarImageDataUrl?: string };
 
 @Injectable({
   providedIn: 'root'
 })
 export class SessionService {
-  private static readonly OPERATOR_BOOTSTRAP_EMAIL_PATTERN =
-    /^operator-[0-9a-f]{24}@deployment\.invalid$/;
+
   private static readonly SESSION_STORAGE_KEY = APP_STORAGE_KEYS.session;
   private static readonly ADMIN_SUPPORT_SESSION_KEY = APP_STORAGE_KEYS.adminSupportSession;
   private static readonly DEMO_ACTIVE_USER_KEY = APP_STORAGE_KEYS.demoActiveUser;
-  private static readonly OPERATOR_BOOTSTRAP_SESSION_KEY =
-    APP_STORAGE_KEYS.operatorBootstrapSession;
-  private static readonly OPERATOR_BOOTSTRAP_TOKEN_KEY =
-    APP_STORAGE_KEYS.operatorBootstrapToken;
 
   private readonly injector = inject(Injector);
   private readonly offlineCache = inject(OfflineCacheService);
   private cacheClear: Promise<void> = Promise.resolve();
   private readonly sessionRef = signal<AppSession | null>(this.loadStoredSession());
   private readonly authModeRef = signal<AuthMode>('selector');
-  private readonly firebaseBusyRef = signal(false);
-  private readonly firebaseNoticeRef = signal('');
+  private readonly authBusyRef = signal(false);
+  private readonly authNoticeRef = signal('');
   private firebaseAuthServicePromise: Promise<FirebaseAuthServiceInstance> | null = null;
-  private firebaseSessionRegistryServicePromise:
-    Promise<FirebaseSessionRegistryServiceInstance> | null = null;
-  private operatorBootstrapAuthServicePromise:
-    Promise<HttpOperatorBootstrapAuthServiceInstance> | null = null;
+  private sessionRegistryServicePromise:
+    Promise<HttpSessionRegistryServiceInstance> | null = null;
 
   readonly session = this.sessionRef.asReadonly();
-  readonly firebaseBusy = this.firebaseBusyRef.asReadonly();
-  readonly firebaseNotice = this.firebaseNoticeRef.asReadonly();
-  readonly firebaseProfile = computed(() => {
+  readonly authBusy = this.authBusyRef.asReadonly();
+  readonly authNotice = this.authNoticeRef.asReadonly();
+  readonly accountProfile = computed(() => {
     const current = this.sessionRef();
-    return current?.kind === 'firebase' ? current.profile : null;
+    return current?.kind === 'authenticated' ? current.profile : null;
   });
   readonly activeUserId = computed(() => {
     const current = this.sessionRef();
     if (current?.kind === 'demo') {
       return current.userId.trim();
     }
-    if (current?.kind === 'firebase') {
+    if (current?.kind === 'authenticated') {
       return current.profile.id.trim();
     }
     return '';
@@ -85,9 +75,7 @@ export class SessionService {
   readonly identity = computed(() => {
     const session = this.sessionRef();
     if (!session) return null;
-    return session.kind === 'operator-bootstrap'
-      ? JSON.stringify([session.kind, session.email, session.expiresAt])
-      : JSON.stringify([session.kind, session.kind === 'firebase' ? session.profile.id : session.userId,
+    return JSON.stringify([session.kind, session.kind === 'authenticated' ? session.profile.id : session.userId,
           session.sessionId, session.kind === 'demo' ? session.supportContext : undefined]);
   });
 
@@ -106,9 +94,9 @@ export class SessionService {
     return this.sessionRef();
   }
 
-  setFirebaseAvatarPreview(sessionId: string, imageUrl: string): void {
+  setSessionAvatarPreview(sessionId: string, imageUrl: string): void {
     const session = this.sessionRef();
-    if (session?.kind !== 'firebase' || session.sessionId !== sessionId) {
+    if (session?.kind !== 'authenticated' || session.sessionId !== sessionId) {
       return;
     }
     const source = imageUrl.trim();
@@ -118,10 +106,10 @@ export class SessionService {
     this.persistSession({ ...session, avatarImageUrl: source, avatarImageDataUrl: undefined });
   }
 
-  setFirebaseAvatarPreviewData(sessionId: string, imageUrl: string, dataUrl: string): void {
+  setSessionAvatarPreviewData(sessionId: string, imageUrl: string, dataUrl: string): void {
     const session = this.sessionRef();
     const imageData = avatarPreviewDataUrl(dataUrl);
-    if (session?.kind !== 'firebase' || session.sessionId !== sessionId
+    if (session?.kind !== 'authenticated' || session.sessionId !== sessionId
       || session.avatarImageUrl !== imageUrl || !imageData) {
       return;
     }
@@ -130,39 +118,11 @@ export class SessionService {
 
   async ensureSession(): Promise<AppSession | null> {
     const current = this.sessionRef();
-    if (!current) {
+    if (current?.kind === 'authenticated' && !this.isFutureIso(current.expiresAt)) {
+      this.rejectSession(current.sessionId);
       return null;
     }
-    if (current.kind === 'demo') {
-      return current;
-    }
-    if (current.kind === 'operator-bootstrap') {
-      return this.getOperatorBootstrapToken() ? current : null;
-    }
-    if (this.isBrowserOffline()) {
-      return current;
-    }
-    let restoredProfile: FirebaseAuthProfileDto | null;
-    try {
-      restoredProfile = await (await this.firebaseAuthService()).restoreSessionProfile();
-    } catch (error) {
-      if (this.isFirebaseNetworkError(error)) return current;
-      throw error;
-    }
-    if (!restoredProfile) {
-      this.clearStoredSession();
-      return null;
-    }
-      const nextSession: AppSession = {
-        kind: 'firebase',
-        profile: restoredProfile,
-        avatarImageUrl: restoredProfile.id === current.profile.id ? current.avatarImageUrl : undefined,
-        avatarImageDataUrl: restoredProfile.id === current.profile.id ? current.avatarImageDataUrl : undefined,
-        sessionId: current.sessionId
-      };
-      this.persistSession(nextSession);
-      void this.initializeFirebaseMessagingForSession(nextSession);
-      return nextSession;
+    return current;
   }
 
   startDemoSession(
@@ -211,7 +171,7 @@ export class SessionService {
       supportContext
     };
     try {
-      const response = await (await this.firebaseSessionRegistryService()).registerDemoLogin(
+      const response = await (await this.sessionRegistryService()).registerDemoLogin(
         session.sessionId,
         session.userId,
         {
@@ -227,9 +187,9 @@ export class SessionService {
         this.persistSession(session);
         return session;
       }
-      this.firebaseNoticeRef.set('auth.session.limit.reached');
+      this.authNoticeRef.set('auth.session.limit.reached');
     } catch (error) {
-      this.firebaseNoticeRef.set(
+      this.authNoticeRef.set(
         this.httpErrorStatus(error) === 409
           ? 'auth.session.limit.reached'
           : 'auth.session.registration.failed'
@@ -239,92 +199,58 @@ export class SessionService {
   }
 
   async cancelFirebaseAccountLink(): Promise<void> {
-    if (this.firebaseAuthServicePromise && !this.firebaseBusyRef()) {
+    if (this.firebaseAuthServicePromise && !this.authBusyRef()) {
       (await this.firebaseAuthServicePromise).cancelAccountLink();
-      this.firebaseNoticeRef.set('');
+      this.authNoticeRef.set('');
     }
   }
 
-  async startFirebaseSession(request?: FirebaseAuthRequestDto): Promise<AppSession | null> {
-    request ??= { provider: 'google' };
-    if (this.firebaseBusyRef()) {
-      return null;
-    }
-    this.firebaseBusyRef.set(true);
-    this.firebaseNoticeRef.set('');
+  async startAuthSession(request: FirebaseAuthRequestDto = { provider: 'google' }): Promise<AppSession | null> {
+    if (this.authBusyRef()) return null;
+    this.authBusyRef.set(true);
+    this.authNoticeRef.set('');
     try {
+      if (request.provider === 'email' && request.emailMode === 'sign-in') {
+        try {
+          const response = await (await this.sessionRegistryService()).registerPasswordLogin(
+            this.reusableSessionId({ email: request.email ?? '' }) || this.newOpaqueId('session'),
+            { attemptId: this.newOpaqueId('attempt'), provider: 'password',
+              email: request.email?.trim(), password: request.password }
+          );
+          if (!response.accepted) {
+            this.authNoticeRef.set('auth.session.limit.reached');
+            return null;
+          }
+          const session = this.sessionFromResponse(response);
+          if (!session) return null;
+          this.persistSession(session);
+          void this.initializeFirebaseMessagingForSession(session);
+          return session;
+        } catch (error) {
+          if (this.httpErrorStatus(error) !== 404) {
+            this.authNoticeRef.set(this.httpErrorStatus(error) === 429
+              ? 'auth.session.login.throttled' : 'auth.session.login.failed');
+            return null;
+          }
+        }
+      }
       return await this.startFirebaseSessionInternal(request);
     } finally {
-      this.firebaseBusyRef.set(false);
+      this.authBusyRef.set(false);
     }
   }
 
-  async startAuthSession(
-    request?: FirebaseAuthRequestDto
-  ): Promise<AppSession | null> {
-    request ??= { provider: 'google' };
-    if (!this.isOperatorBootstrapCandidate(request)) {
-      return this.startFirebaseSession(request);
-    }
-    if (this.firebaseBusyRef()) {
-      return null;
-    }
-    this.firebaseBusyRef.set(true);
-    this.firebaseNoticeRef.set('');
-    try {
-      const email = `${request.email ?? ''}`.trim();
-      const password = `${request.password ?? ''}`;
-      if (!email || !password) {
-        this.firebaseNoticeRef.set('operator.bootstrap.auth.invalid');
-        return null;
-      }
-      try {
-        const result = await (await this.operatorBootstrapAuthService()).signIn({
-          email,
-          password
-        });
-        const session: AppSession = {
-          kind: 'operator-bootstrap',
-          email: result.email,
-          expiresAt: result.expiresAt
-        };
-        if (
-          Date.parse(session.expiresAt) <= Date.now()
-          || !this.persistOperatorBootstrapSession(session, result.accessToken)
-        ) {
-          this.firebaseNoticeRef.set('operator.bootstrap.auth.response.invalid');
-          return null;
-        }
-        return session;
-      } catch (error) {
-        const status = this.httpErrorStatus(error);
-        if (status === 404) {
-          return await this.startFirebaseSessionInternal(request);
-        }
-        this.firebaseNoticeRef.set(
-          status === 401
-            ? 'operator.bootstrap.auth.invalid'
-            : status === 429
-              ? 'operator.bootstrap.auth.throttled'
-              : 'operator.bootstrap.auth.failed'
-        );
-        return null;
-      }
-    } finally {
-      this.firebaseBusyRef.set(false);
-    }
-  }
-
-  async restoreFirebaseSession(): Promise<AppSession | null> {
-    if (this.firebaseBusyRef()) {
+  async restoreAuthSession(): Promise<AppSession | null> {
+    if (this.sessionRef()?.kind === 'authenticated') return this.ensureSession();
+    if (this.authBusyRef()) {
       return this.sessionRef();
     }
     const current = this.sessionRef();
-    if (current?.kind === 'firebase' && this.isBrowserOffline()) {
+    if (current?.kind === 'authenticated' && this.isBrowserOffline()) {
       return current;
     }
-    this.firebaseBusyRef.set(true);
-    this.firebaseNoticeRef.set('');
+    this.authBusyRef.set(true);
+    this.authNoticeRef.set('');
     try {
       const profile = await (await this.firebaseAuthService()).restoreSessionProfile();
       if (!profile) {
@@ -332,9 +258,10 @@ export class SessionService {
         return null;
       }
       const session: AppSession = {
-        kind: 'firebase',
+        kind: 'authenticated',
+        accessToken: '', expiresAt: '',
         profile,
-        sessionId: this.reusableFirebaseSessionId(profile) || this.newOpaqueId('session')
+        sessionId: this.reusableSessionId(profile) || this.newOpaqueId('session')
       };
       if (!await this.registerFirebaseLogin(session, 'firebase')) {
         return null;
@@ -343,10 +270,10 @@ export class SessionService {
       void this.initializeFirebaseMessagingForSession(session);
       return session;
     } catch (error) {
-      if (current?.kind === 'firebase' && this.isFirebaseNetworkError(error)) return current;
+      if (current?.kind === 'authenticated' && this.isFirebaseNetworkError(error)) return current;
       throw error;
     } finally {
-      this.firebaseBusyRef.set(false);
+      this.authBusyRef.set(false);
     }
   }
 
@@ -355,15 +282,8 @@ export class SessionService {
     const adminSupportSession = this.isAdminSupportSession(current);
     if (current?.kind === 'demo' && !adminSupportSession) endDemoFailoverSession();
     const sessionRegistryEnabled = environment.activitiesDataSource === 'http';
-    let firebaseToken: string | null = null;
-    if (sessionRegistryEnabled && current?.kind === 'firebase') {
-      try {
-        firebaseToken = await (await this.firebaseAuthService()).getIdToken();
-      } catch {
-        // Local logout must still complete if Firebase cannot return a token.
-      }
-    }
-    this.firebaseNoticeRef.set('');
+
+    this.authNoticeRef.set('');
     this.clearStoredSession();
     await this.cacheClear;
     if (!adminSupportSession && typeof localStorage !== 'undefined') {
@@ -371,77 +291,43 @@ export class SessionService {
     }
     if (sessionRegistryEnabled) {
       try {
-        const sessionId = current?.kind === 'demo' || current?.kind === 'firebase'
+        const sessionId = current?.kind === 'demo' || current?.kind === 'authenticated'
           ? `${current.sessionId ?? ''}`.trim()
           : '';
         if (current?.kind === 'demo' && sessionId) {
-          await (await this.firebaseSessionRegistryService()).revokeDemoSession(
+          await (await this.sessionRegistryService()).revokeDemoSession(
             sessionId,
             current.userId
           );
-        } else if (current?.kind === 'firebase' && sessionId && firebaseToken) {
-          await (await this.firebaseSessionRegistryService()).revokeFirebaseSession(
+        } else if (current?.kind === 'authenticated' && sessionId && current.accessToken) {
+          await (await this.sessionRegistryService()).revokeSession(
             sessionId,
             current.profile.id,
-            firebaseToken
+            current.accessToken
           );
         }
       } catch {
         // Keep logout resilient when the registry is offline or already revoked.
       }
     }
-    if (current?.kind === 'firebase') {
-      await (await this.firebaseAuthService()).signOut();
+    if (this.firebaseAuthServicePromise) {
+      await (await this.firebaseAuthServicePromise).signOut();
     }
   }
 
-  getOperatorBootstrapToken(): string | null {
-    const current = this.sessionRef();
-    if (
-      current?.kind !== 'operator-bootstrap'
-      || !this.isFutureIso(current.expiresAt)
-      || typeof sessionStorage === 'undefined'
-    ) {
-      if (current?.kind === 'operator-bootstrap') {
-        this.clearOperatorBootstrapSession();
-      }
-      return null;
-    }
-    try {
-      const token = `${sessionStorage.getItem(
-        SessionService.OPERATOR_BOOTSTRAP_TOKEN_KEY
-      ) ?? ''}`.trim();
-      if (token) {
-        return token;
-      }
-    } catch {
-      // The bootstrap credential is unavailable when session storage is blocked.
-    }
-    this.clearOperatorBootstrapSession();
-    return null;
+  async getAccessToken(): Promise<string | null> {
+    const session = await this.ensureSession();
+    return session?.kind === 'authenticated' ? session.accessToken : null;
   }
 
-  clearOperatorBootstrapSession(noticeKey = ''): void {
-    const bootstrapActive = this.sessionRef()?.kind === 'operator-bootstrap';
-    this.clearOperatorBootstrapStorage();
-    if (bootstrapActive) {
-      this.sessionRef.set(null);
-    }
-    if (noticeKey) {
-      this.firebaseNoticeRef.set(noticeKey);
-    }
+  currentSessionId(): string {
+    return this.sessionRef()?.sessionId?.trim() ?? '';
   }
 
-  async getFirebaseIdToken(): Promise<string | null> {
-    if (!isFirebaseLoginEnabled() || this.sessionRef()?.kind !== 'firebase') {
-      return null;
-    }
-    return (await this.firebaseAuthService()).getIdToken();
-  }
-
-  currentFirebaseSessionId(): string {
-    const current = this.sessionRef();
-    return current?.kind === 'firebase' ? current.sessionId.trim() : '';
+  rejectSession(sessionId: string): boolean {
+    if (!sessionId || this.sessionRef()?.sessionId !== sessionId) return false;
+    this.clearStoredSession();
+    return true;
   }
 
   private async firebaseAuthService(): Promise<FirebaseAuthServiceInstance> {
@@ -452,24 +338,14 @@ export class SessionService {
     return this.firebaseAuthServicePromise;
   }
 
-  private async operatorBootstrapAuthService():
-    Promise<HttpOperatorBootstrapAuthServiceInstance> {
-    if (!this.operatorBootstrapAuthServicePromise) {
-      this.operatorBootstrapAuthServicePromise = import(
-        '../../../http/services/operator/operator-bootstrap-auth.service'
-      ).then(module => this.injector.get(module.HttpOperatorBootstrapAuthService));
+  private async sessionRegistryService():
+    Promise<HttpSessionRegistryServiceInstance> {
+    if (!this.sessionRegistryServicePromise) {
+      this.sessionRegistryServicePromise = import(
+        '../../../http/services/accounts/session-registry.service'
+      ).then(module => this.injector.get(module.HttpSessionRegistryService));
     }
-    return this.operatorBootstrapAuthServicePromise;
-  }
-
-  private async firebaseSessionRegistryService():
-    Promise<FirebaseSessionRegistryServiceInstance> {
-    if (!this.firebaseSessionRegistryServicePromise) {
-      this.firebaseSessionRegistryServicePromise = import(
-        '../../../http/services/accounts/firebase-session-registry.service'
-      ).then(module => this.injector.get(module.FirebaseSessionRegistryService));
-    }
-    return this.firebaseSessionRegistryServicePromise;
+    return this.sessionRegistryServicePromise;
   }
 
   private async startFirebaseSessionInternal(
@@ -478,13 +354,13 @@ export class SessionService {
     const result = await (await this.firebaseAuthService()).signIn(request);
     if (result.emailVerificationSent) {
       const email = result.email?.trim();
-      this.firebaseNoticeRef.set(email
+      this.authNoticeRef.set(email
         ? `Verification email sent to ${email}. Confirm it, then continue here.`
         : 'Verification email sent. Confirm it, then continue here.');
       return null;
     }
     if (result.errorMessage) {
-      this.firebaseNoticeRef.set(result.errorMessage);
+      this.authNoticeRef.set(result.errorMessage);
       return null;
     }
     if (!result.profile) {
@@ -494,9 +370,10 @@ export class SessionService {
       localStorage.removeItem(SessionService.DEMO_ACTIVE_USER_KEY);
     }
     const session: AppSession = {
-      kind: 'firebase',
+      kind: 'authenticated',
+      accessToken: '', expiresAt: '',
       profile: result.profile,
-      sessionId: this.reusableFirebaseSessionId(result.profile) || this.newOpaqueId('session')
+      sessionId: this.reusableSessionId(result.profile) || this.newOpaqueId('session')
     };
     if (!await this.registerFirebaseLogin(session, request.provider)) {
       return null;
@@ -507,7 +384,7 @@ export class SessionService {
   }
 
   private async initializeFirebaseMessagingForSession(session: AppSession): Promise<void> {
-    if (environment.activitiesDataSource === 'http' && (session.kind !== 'firebase'
+    if (environment.activitiesDataSource === 'http' && (session.kind !== 'authenticated'
       || !environment.firebaseMessagingEnabled || !environment.serviceWorkerEnabled)) {
       return;
     }
@@ -516,17 +393,17 @@ export class SessionService {
   }
 
   private async registerFirebaseLogin(
-    session: Extract<AppSession, { kind: 'firebase' }>,
+    session: Extract<AppSession, { kind: 'authenticated' }>,
     provider: string
   ): Promise<boolean> {
     const token = await (await this.firebaseAuthService()).getIdToken();
     if (!token) {
-      this.firebaseNoticeRef.set('auth.session.registration.failed');
+      this.authNoticeRef.set('auth.session.registration.failed');
       await (await this.firebaseAuthService()).signOut();
       return false;
     }
     try {
-      const response = await (await this.firebaseSessionRegistryService()).registerLogin(
+      const response = await (await this.sessionRegistryService()).registerLogin(
         session.sessionId,
         token,
         {
@@ -535,11 +412,16 @@ export class SessionService {
         }
       );
       if (response.accepted) {
-        return true;
+        const authenticated = this.sessionFromResponse(response);
+        if (authenticated) {
+          Object.assign(session, authenticated);
+          return true;
+        }
+        return false;
       }
-      this.firebaseNoticeRef.set('auth.session.limit.reached');
+      this.authNoticeRef.set('auth.session.limit.reached');
     } catch (error) {
-      this.firebaseNoticeRef.set(
+      this.authNoticeRef.set(
         this.httpErrorStatus(error) === 409
           ? 'auth.session.limit.reached'
           : 'auth.session.registration.failed'
@@ -550,12 +432,11 @@ export class SessionService {
   }
 
   private persistSession(session: AppSession): void {
-    const nextId = session.kind === 'demo' ? session.userId : session.kind === 'firebase' ? session.profile.id : '';
+    const nextId = session.kind === 'demo' ? session.userId : session.kind === 'authenticated' ? session.profile.id : '';
     const previousId = this.activeUserId();
     if (previousId && previousId !== nextId) this.cacheClear = this.offlineCache.clearUser(previousId);
     if (nextId) this.offlineCache.activateUser(nextId);
     this.clearAdminSupportSessionStorage();
-    this.clearOperatorBootstrapStorage();
     this.sessionRef.set(session);
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(SessionService.SESSION_STORAGE_KEY, JSON.stringify(session));
@@ -563,45 +444,16 @@ export class SessionService {
     if (session.kind === 'demo' && !session.supportContext) prewarmDemoFailover();
   }
 
-  private reusableFirebaseSessionId(profile: FirebaseAuthProfileDto): string {
+  private reusableSessionId(profile: Pick<AccountAuthProfileDto, 'email'>): string {
     const current = this.sessionRef();
-    if (current?.kind !== 'firebase') {
+    if (current?.kind !== 'authenticated') {
       return '';
     }
-    const currentUserId = current.profile.id.trim();
-    const nextUserId = profile.id.trim();
-    return currentUserId && currentUserId === nextUserId
+    const currentEmail = current.profile.email.trim().toLowerCase();
+    const nextEmail = profile.email.trim().toLowerCase();
+    return currentEmail && currentEmail === nextEmail
       ? current.sessionId.trim()
       : '';
-  }
-
-  private persistOperatorBootstrapSession(
-    session: Extract<AppSession, { kind: 'operator-bootstrap' }>,
-    accessToken: string
-  ): boolean {
-    if (typeof sessionStorage === 'undefined') {
-      return false;
-    }
-    try {
-      this.clearAdminSupportSessionStorage();
-      sessionStorage.setItem(
-        SessionService.OPERATOR_BOOTSTRAP_SESSION_KEY,
-        JSON.stringify(session)
-      );
-      sessionStorage.setItem(
-        SessionService.OPERATOR_BOOTSTRAP_TOKEN_KEY,
-        accessToken
-      );
-      if (typeof localStorage !== 'undefined') {
-        localStorage.removeItem(SessionService.SESSION_STORAGE_KEY);
-        localStorage.removeItem(SessionService.DEMO_ACTIVE_USER_KEY);
-      }
-      this.sessionRef.set(session);
-      return true;
-    } catch {
-      this.clearOperatorBootstrapStorage();
-      return false;
-    }
   }
 
   private clearStoredSession(): void {
@@ -609,7 +461,6 @@ export class SessionService {
     this.cacheClear = this.offlineCache.clearUser(this.activeUserId());
     this.sessionRef.set(null);
     this.clearAdminSupportSessionStorage();
-    this.clearOperatorBootstrapStorage();
     if (!adminSupportSession && typeof localStorage !== 'undefined') {
       localStorage.removeItem(SessionService.SESSION_STORAGE_KEY);
     }
@@ -640,10 +491,7 @@ export class SessionService {
     if (adminSupportSession) {
       return adminSupportSession;
     }
-    const operatorBootstrapSession = this.loadStoredOperatorBootstrapSession();
-    if (operatorBootstrapSession) {
-      return operatorBootstrapSession;
-    }
+
     if (typeof localStorage === 'undefined') {
       return null;
     }
@@ -666,7 +514,9 @@ export class SessionService {
         };
       }
       if (
-        parsed.kind === 'firebase' &&
+        parsed.kind === 'authenticated' &&
+        typeof parsed.accessToken === 'string' && !!parsed.accessToken &&
+        typeof parsed.expiresAt === 'string' && this.isFutureIso(parsed.expiresAt) &&
         parsed.profile &&
         typeof parsed.sessionId === 'string' &&
         parsed.sessionId.trim().length > 0 &&
@@ -676,7 +526,8 @@ export class SessionService {
         typeof parsed.profile.initials === 'string'
       ) {
         return {
-          kind: 'firebase',
+          kind: 'authenticated',
+          accessToken: parsed.accessToken, expiresAt: parsed.expiresAt,
           sessionId: parsed.sessionId.trim(),
           avatarImageUrl: typeof parsed.avatarImageUrl === 'string' ? parsed.avatarImageUrl : undefined,
           avatarImageDataUrl: avatarPreviewDataUrl(parsed.avatarImageDataUrl),
@@ -702,8 +553,7 @@ export class SessionService {
       return false;
     }
     try {
-      this.clearOperatorBootstrapStorage();
-      sessionStorage.setItem(
+        sessionStorage.setItem(
         SessionService.ADMIN_SUPPORT_SESSION_KEY,
         JSON.stringify(session)
       );
@@ -750,58 +600,6 @@ export class SessionService {
     }
   }
 
-  private loadStoredOperatorBootstrapSession():
-    Extract<AppSession, { kind: 'operator-bootstrap' }> | null {
-    if (typeof sessionStorage === 'undefined') {
-      return null;
-    }
-    try {
-      const rawSession = sessionStorage.getItem(
-        SessionService.OPERATOR_BOOTSTRAP_SESSION_KEY
-      );
-      const token = `${sessionStorage.getItem(
-        SessionService.OPERATOR_BOOTSTRAP_TOKEN_KEY
-      ) ?? ''}`.trim();
-      if (!rawSession || !token) {
-        this.clearOperatorBootstrapStorage();
-        return null;
-      }
-      const parsed = JSON.parse(rawSession) as Partial<
-        Extract<AppSession, { kind: 'operator-bootstrap' }>
-      >;
-      const email = `${parsed.email ?? ''}`.trim();
-      const expiresAt = `${parsed.expiresAt ?? ''}`.trim();
-      if (
-        parsed.kind !== 'operator-bootstrap'
-        || !email
-        || !this.isFutureIso(expiresAt)
-      ) {
-        this.clearOperatorBootstrapStorage();
-        return null;
-      }
-      return {
-        kind: 'operator-bootstrap',
-        email,
-        expiresAt
-      };
-    } catch {
-      this.clearOperatorBootstrapStorage();
-      return null;
-    }
-  }
-
-  private clearOperatorBootstrapStorage(): void {
-    if (typeof sessionStorage === 'undefined') {
-      return;
-    }
-    try {
-      sessionStorage.removeItem(SessionService.OPERATOR_BOOTSTRAP_SESSION_KEY);
-      sessionStorage.removeItem(SessionService.OPERATOR_BOOTSTRAP_TOKEN_KEY);
-    } catch {
-      // Clearing a blocked browser storage area is best effort.
-    }
-  }
-
   private clearAdminSupportSessionStorage(): void {
     if (typeof sessionStorage === 'undefined') {
       return;
@@ -820,12 +618,14 @@ export class SessionService {
       && session.supportContext?.kind === 'admin-support';
   }
 
-  private isOperatorBootstrapCandidate(request: FirebaseAuthRequestDto): boolean {
-    return request.provider === 'email'
-      && request.emailMode === 'sign-in'
-      && SessionService.OPERATOR_BOOTSTRAP_EMAIL_PATTERN.test(
-        `${request.email ?? ''}`.trim()
-      );
+  private sessionFromResponse(response: import('../../../contracts/accounts/user.interface').UserSessionLoginResponseDto): Extract<AppSession, { kind: 'authenticated' }> | null {
+    const session = response.session;
+    if (!response.accepted || !session?.accessToken || !session.sessionId
+      || !session.profile?.id || !this.isFutureIso(session.expiresAt)) {
+      this.authNoticeRef.set('auth.session.registration.failed');
+      return null;
+    }
+    return { kind: 'authenticated', ...session };
   }
 
   private isFutureIso(value: string): boolean {

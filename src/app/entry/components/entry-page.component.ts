@@ -134,8 +134,8 @@ export class EntryPageComponent implements OnInit, OnDestroy {
       if (!host || !component) return;
       const ref = untracked(() => host.createComponent(component, { bindings: [
         inputBinding('open', () => this.authOpen()),
-        inputBinding('busy', () => this.session.firebaseBusy()),
-        inputBinding('statusMessage', () => this.session.firebaseNotice() || this.error()),
+        inputBinding('busy', () => this.session.authBusy()),
+        inputBinding('statusMessage', () => this.session.authNotice() || this.error()),
         outputBinding<void>('closeRequested', () => this.authOpen.set(false)),
         outputBinding<FirebaseAuthRequestDto>('authRequested', event => { void this.authenticate(event); })
       ] }));
@@ -254,7 +254,7 @@ export class EntryPageComponent implements OnInit, OnDestroy {
       selectableModes: mode === 'operator' ? ['operator'] : ['member', 'admin', 'operator'],
       onSelect: async (userId) => {
         const session = this.localMode ? this.session.startDemoSession(userId) : await this.session.startTrackedDemoSession(userId);
-        if (!session) return this.i18n.translate(this.session.firebaseNotice() || 'demo.session.open.error');
+        if (!session) return this.i18n.translate(this.session.authNotice() || 'demo.session.open.error');
         try {
           return await this.finishEntry();
         }
@@ -266,7 +266,7 @@ export class EntryPageComponent implements OnInit, OnDestroy {
   private async finishEntry(): Promise<boolean> {
     const session = this.session.currentSession();
     if (!session) return false;
-    if (session.kind === 'operator-bootstrap') return this.router.navigateByUrl('/operator');
+    if (session.kind === 'authenticated') return this.router.navigateByUrl('/operator');
     const cachedUser = this.localMode && session.kind === 'demo'
       ? this.users.peekCachedUserById(session.userId) : null;
     const localWorkspaceUser = cachedUser

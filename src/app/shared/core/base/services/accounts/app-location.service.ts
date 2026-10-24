@@ -139,7 +139,7 @@ export class AppLocationService {
     }
 
     const session = this.sessionService.currentSession();
-    if (session?.kind !== 'firebase' || session.profile.id.trim() !== normalizedUserId) {
+    if (session?.kind !== 'authenticated' || session.profile.id.trim() !== normalizedUserId) {
       return null;
     }
 
@@ -512,7 +512,7 @@ export class AppLocationService {
     const session = this.sessionService.currentSession();
     return Boolean(
       normalizedUserId
-      && (session?.kind === 'firebase'
+      && (session?.kind === 'authenticated'
         || (session?.kind === 'demo' && session.userId.trim() === normalizedUserId))
       && this.userProfileStore.activeUserId().trim() === normalizedUserId
     );
