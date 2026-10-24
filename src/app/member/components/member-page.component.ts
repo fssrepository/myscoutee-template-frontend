@@ -322,7 +322,7 @@ export class MemberPageComponent implements OnDestroy {
        return;
       }
      }
-     await this.logout();
+     await this.logout(!!userId);
     }
    });
    return;
@@ -346,8 +346,8 @@ export class MemberPageComponent implements OnDestroy {
    void this.help.preload(id).catch(() => this.dialogs.openInfo('document.load.failed', { title: 'content.load.error.title' }));
   }
  }
- protected async logout(): Promise<void> {
-  await this.session.logout(); this.profiles.setActiveUserId(''); await this.router.navigateByUrl('/entry');
+ protected async logout(sessionAlreadyRevoked = false): Promise<void> {
+  await this.session.logout({ sessionAlreadyRevoked }); this.profiles.setActiveUserId(''); await this.router.navigateByUrl('/entry');
  }
  ngOnDestroy(): void {
   ++this.hydrationRequestVersion;

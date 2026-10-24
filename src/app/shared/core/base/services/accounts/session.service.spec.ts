@@ -152,7 +152,7 @@ describe('SessionService account sessions', () => {
     await expect(crypto.subtle.exportKey('raw', key)).rejects.toThrow();
     const restored = TestBed.runInInjectionContext(() => new SessionService());
     await expect(restored.getAccessToken()).resolves.toBe('app-token');
-    expect(registerPasswordLogin).toHaveBeenCalledWith(expect.stringMatching(/^session:/),
+    expect(registerPasswordLogin).toHaveBeenCalledExactlyOnceWith(expect.stringMatching(/^session:/),
       expect.objectContaining({ email: installerEmail, password: 'installer-password' }));
     expect(firebaseSignIn).not.toHaveBeenCalled();
   });
@@ -209,13 +209,28 @@ describe('SessionService account sessions', () => {
     expect(service.currentSession()).toBeNull();
   });
 
+  it('registers a password login once across concurrent clicks and session continuation', async () => {
+    let accept!: (response: ReturnType<typeof loginResponse>) => void;
+    registerPasswordLogin.mockReturnValue(new Promise(resolve => accept = resolve));
+    const service = TestBed.inject(SessionService);
+    const pending = service.startAuthSession(emailSignInRequest());
+    await expect(service.startAuthSession(emailSignInRequest())).resolves.toBeNull();
+    await vi.waitFor(() => expect(registerPasswordLogin).toHaveBeenCalledOnce());
+    accept(loginResponse('single-login'));
+    await pending;
+    await expect(service.restoreAuthSession()).resolves.toMatchObject({ sessionId: 'single-login' });
+    expect(registerPasswordLogin).toHaveBeenCalledOnce();
+    expect(registerLogin).not.toHaveBeenCalled();
+    expect(firebaseRestore).not.toHaveBeenCalled();
+  });
+
   it('exchanges Firebase identity proof for the same canonical account session', async () => {
     firebaseSignIn.mockResolvedValue({ profile: { id: 'provider-uid', name: 'Provider', email: installerEmail, initials: 'P' } });
     const service = TestBed.inject(SessionService);
     await expect(service.startAuthSession({ provider: 'google' })).resolves.toMatchObject({
       kind: 'authenticated', profile: { id: 'account-user' }, accessToken: 'app-token'
     });
-    expect(registerLogin).toHaveBeenCalledWith(expect.any(String), 'firebase-token', expect.objectContaining({ provider: 'google' }));
+    expect(registerLogin).toHaveBeenCalledExactlyOnceWith(expect.any(String), 'firebase-token', expect.objectContaining({ provider: 'google' }));
     expect(await service.getAccessToken()).toBe('app-token');
     expect(firebaseGetIdToken).toHaveBeenCalledOnce();
   });
@@ -272,6 +287,20 @@ describe('SessionService account sessions', () => {
     expect(revokeSession).toHaveBeenCalledWith('current', 'account-user', 'app-token');
     expect(service.currentSession()).toBeNull();
     expect(firebaseGetIdToken).not.toHaveBeenCalled();
+  });
+
+  it.each(['authenticated', 'demo'])('does not revoke an already completed %s logout twice', async kind => {
+    environment.activitiesDataSource = 'http';
+    localStorage.setItem(APP_STORAGE_KEYS.session, JSON.stringify(kind === 'demo'
+      ? { kind: 'demo', userId: 'account-user', sessionId: 'revoked' }
+      : { kind: 'authenticated', ...loginResponse('revoked').session }));
+    const service = TestBed.inject(SessionService);
+    await service.logout({ sessionAlreadyRevoked: true });
+    await service.ensureSession();
+    expect(revokeSession).not.toHaveBeenCalled();
+    expect(revokeDemoSession).not.toHaveBeenCalled();
+    expect(service.currentSession()).toBeNull();
+    expect(localStorage.getItem(APP_STORAGE_KEYS.session)).toBeNull();
   });
 
   it('publishes a tracked demo session only after server registration accepts it', async () => {

@@ -284,7 +284,7 @@ export class SessionService {
     }
   }
 
-  async logout(): Promise<void> {
+  async logout(options: { sessionAlreadyRevoked?: boolean } = {}): Promise<void> {
     const current = this.sessionRef();
     const adminSupportSession = this.isAdminSupportSession(current);
     if (current?.kind === 'demo' && !adminSupportSession) endDemoFailoverSession();
@@ -296,7 +296,8 @@ export class SessionService {
     if (!adminSupportSession && typeof localStorage !== 'undefined') {
       localStorage.removeItem(SessionService.DEMO_ACTIVE_USER_KEY);
     }
-    if (sessionRegistryEnabled) {
+    // The confirmed user action may already have revoked this same credential.
+    if (sessionRegistryEnabled && !options.sessionAlreadyRevoked) {
       try {
         const sessionId = current?.kind === 'demo' || current?.kind === 'authenticated'
           ? `${current.sessionId ?? ''}`.trim()
