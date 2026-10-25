@@ -1,6 +1,7 @@
 import { Injectable, Injector, computed, inject, signal } from '@angular/core';
 
 import { environment } from '../../../../../../environments/environment';
+import { version as packageVersion } from '../../../../../../../package.json';
 import { APP_CACHE_KEYS, APP_STORAGE_KEYS } from '../../../common/storage-scope';
 import { pwaNotificationRegistrationEnabled } from '../../../common/pwa-runtime-policy';
 
@@ -16,8 +17,6 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 interface AppVersionPayload {
-  version?: unknown;
-  gitSha?: unknown;
   buildId?: unknown;
 }
 
@@ -28,10 +27,12 @@ export class PwaService {
   private static readonly INSTALL_DISMISSED_STORAGE_KEY = APP_STORAGE_KEYS.pwaInstallPromptDismissed;
   private static readonly UPDATE_RELOAD_ATTEMPT_STORAGE_KEY = APP_STORAGE_KEYS.pwaUpdateReloadAttempt;
   private static readonly BUILD_ID_META_NAME = 'myscoutee-build-id';
+  private static readonly APP_VERSION_META_NAME = 'myscoutee-app-version';
   private static readonly APP_VERSION_URL = 'app-version.json';
   private static readonly CACHE_PREFIX = APP_CACHE_KEYS.runtimePrefix;
   private static readonly WORKER_INSTALL_TIMEOUT_MS = 10_000;
   private static readonly WORKER_ACTIVATION_TIMEOUT_MS = 4_000;
+  private static readonly WORKER_BUILD_ID_TIMEOUT_MS = 1_000;
 
   private readonly injector = inject(Injector);
   private readonly installPromptRef = signal<BeforeInstallPromptEvent | null>(null);
@@ -44,6 +45,7 @@ export class PwaService {
   readonly appVersionLabel = this.appVersionLabelRef.asReadonly();
   private initialized = false;
   private updateCheckInFlight: Promise<void> | null = null;
+  private pendingBundleBuildId: string | null = null;
   private onBeforeInstallPrompt = (event: Event) => {
     const promptEvent = event as BeforeInstallPromptEvent;
     promptEvent.preventDefault();
@@ -79,7 +81,7 @@ export class PwaService {
       return;
     }
     this.initialized = true;
-    void this.loadAppVersionLabel();
+    this.loadAppVersionLabel();
     window.addEventListener('beforeinstallprompt', this.onBeforeInstallPrompt);
     window.addEventListener('appinstalled', this.onAppInstalled);
 
@@ -93,27 +95,12 @@ export class PwaService {
     }
   }
 
-  private async loadAppVersionLabel(): Promise<void> {
-    if (typeof fetch !== 'function' || typeof document === 'undefined') {
-      return;
-    }
-    try {
-      const response = await fetch(new URL(PwaService.APP_VERSION_URL, document.baseURI).toString(), {
-        cache: 'no-store'
-      });
-      if (!response.ok) {
-        return;
-      }
-      const payload = await response.json() as AppVersionPayload;
-      const version = this.normalizeAppVersion(payload.version)
-        || this.normalizeAppVersion(payload.buildId)
-        || this.normalizeAppVersion(payload.gitSha);
-      if (version) {
-        this.appVersionLabelRef.set(version.startsWith('v') ? version : `v${version}`);
-      }
-    } catch {
-      // The local dev server may not have a stamped version file yet.
-    }
+  private loadAppVersionLabel(): void {
+    const meta = typeof document === 'undefined' ? null
+      : document.querySelector<HTMLMetaElement>(`meta[name="${PwaService.APP_VERSION_META_NAME}"]`);
+    const version = this.normalizeAppVersion(meta?.content)
+      || this.normalizeAppVersion(packageVersion);
+    this.appVersionLabelRef.set(version.startsWith('v') ? version : `v${version}`);
   }
 
   private normalizeAppVersion(value: unknown): string {
@@ -128,6 +115,29 @@ export class PwaService {
     }
     return window.matchMedia('(display-mode: standalone)').matches
       || ((window.navigator as Navigator & { standalone?: boolean }).standalone === true);
+  }
+
+  get externalBrowserAvailable(): boolean {
+    return typeof window !== 'undefined' && typeof window.open === 'function';
+  }
+
+  openInBrowser(): void {
+    if (!this.externalBrowserAvailable) return;
+    const url = new URL(window.location.href);
+    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) return;
+    if (typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent)) {
+      // Android's URL handler is platform-specific, independent of browser brand.
+      window.location.assign(`intent:${url.href.slice(url.protocol.length)}#Intent;scheme=${url.protocol.slice(0, -1)};action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;end`);
+      return;
+    }
+    const ios = typeof navigator !== 'undefined' && (
+      /iPhone|iPad|iPod/i.test(navigator.userAgent)
+      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    );
+    // iOS can route this HTTPS scheme to Safari. The embedding application may
+    // still refuse the request; do not infer successful handoff from window.open.
+    const target = ios && url.protocol === 'https:' ? `x-safari-${url.href}` : url.href;
+    window.open(target, '_blank', 'noopener,noreferrer');
   }
 
   async promptInstall(): Promise<boolean> {
@@ -285,27 +295,39 @@ export class PwaService {
   }
 
   private async checkForBundleUpdate(registration: ServiceWorkerRegistration): Promise<void> {
-
     const currentBuildId = this.readDocumentBuildId();
+    await registration.update().catch(() => undefined);
     if (!currentBuildId) {
-      await registration.update().catch(() => undefined);
       return;
     }
 
-    const latestBuildId = await this.fetchLatestBuildId();
+    const waitingWorker = await this.waitForWaitingWorker(registration);
+    if (!waitingWorker && !this.pendingBundleBuildId) {
+      this.clearReloadAttempt();
+      return;
+    }
+
+    // The stamped worker already knows its release. Only workers from older
+    // releases need the existing metadata endpoint during an update/rollback.
+    const latestBuildId = waitingWorker
+      ? await this.readWorkerBuildId(waitingWorker) || await this.fetchLatestBuildId()
+      : this.pendingBundleBuildId;
     if (!latestBuildId) {
       this.clearReloadAttempt();
-      await registration.update().catch(() => undefined);
+      return;
+    }
+    if (latestBuildId === currentBuildId) {
+      this.pendingBundleBuildId = null;
+      this.clearReloadAttempt();
+      if (waitingWorker) await this.activateWaitingWorker(waitingWorker);
       return;
     }
 
-    if (latestBuildId === currentBuildId) {
-      this.clearReloadAttempt();
-      await registration.update().catch(() => undefined);
-      const waitingWorker = await this.waitForWaitingWorker(registration);
-      if (waitingWorker) {
-        await this.activateWaitingWorker(waitingWorker);
-      }
+    // Returning from the OAuth account chooser triggers a foreground check.
+    // Finish the entry/login flow before replacing its document. Check here,
+    // after the async update lookup: the popup may have opened while it ran.
+    // The existing foreground checks will retry without consuming the guard.
+    if (document.querySelector('.firebase-auth-overlay, app-entry-page app-popup')) {
       return;
     }
 
@@ -314,15 +336,40 @@ export class PwaService {
       return;
     }
 
-    await registration.update().catch(() => undefined);
-    const waitingWorker = await this.waitForWaitingWorker(registration);
-    if (!waitingWorker) {
+    if (waitingWorker) {
+      await this.activateWaitingWorker(waitingWorker);
+      // Activation consumes registration.waiting. Retain its identity if the
+      // user opened registration while activation was still in flight.
+      this.pendingBundleBuildId = latestBuildId;
+    }
+    if (document.querySelector('.firebase-auth-overlay, app-entry-page app-popup')) {
       return;
     }
-
     this.markReloadAttempted(attemptKey);
-    await this.activateWaitingWorker(waitingWorker);
+    this.pendingBundleBuildId = null;
     this.reloadPage();
+  }
+
+  private async readWorkerBuildId(worker: ServiceWorker): Promise<string> {
+    if (typeof MessageChannel === 'undefined') {
+      return '';
+    }
+    return new Promise(resolve => {
+      const channel = new MessageChannel();
+      const finish = (buildId: string) => {
+        clearTimeout(timeout);
+        channel.port1.close();
+        channel.port2.close();
+        resolve(buildId);
+      };
+      const timeout = window.setTimeout(() => finish(''), PwaService.WORKER_BUILD_ID_TIMEOUT_MS);
+      channel.port1.onmessage = event => finish(this.normalizeBuildId(event.data?.buildId));
+      try {
+        worker.postMessage({ type: 'GET_BUILD_ID' }, [channel.port2]);
+      } catch {
+        finish('');
+      }
+    });
   }
 
   /** Called only after an update or rollback has completed, never when loading job history. */
@@ -421,13 +468,9 @@ export class PwaService {
       const versionUrl = new URL(PwaService.APP_VERSION_URL, document.baseURI).toString();
       const response = await fetch(versionUrl, {
         cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache'
-        }
+        headers: { 'Cache-Control': 'no-cache' }
       });
-      if (!response.ok) {
-        return '';
-      }
+      if (!response.ok) return '';
       const payload = await response.json() as AppVersionPayload;
       return this.normalizeBuildId(payload.buildId);
     } catch {

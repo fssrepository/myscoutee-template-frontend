@@ -15,7 +15,7 @@ describe('HTTP profile cache within a Firebase session', () => {
   const user = { id: 'server-profile-id', name: 'Real server profile' } as UserDto;
 
   beforeEach(() => {
-    session = { kind: 'firebase', sessionId: 'current-session', profile: {
+    session = { kind: 'authenticated', accessToken: 'app-token', expiresAt: '2099-07-29T12:00:00Z', sessionId: 'current-session', profile: {
       id: 'firebase-uid', name: 'Firebase name', email: 'user@example.test', initials: 'F'
     } };
     stored = new Map();

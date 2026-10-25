@@ -8,13 +8,16 @@ describe('entry account lifecycle', () => {
   const user={...new UserDto(),id:'member',name:'Member',profileStatus:status,previousProfileStatus:'friends only',deletedAtIso:new Date().toISOString()};
   const context=Object.assign(Object.create(EntryPageComponent.prototype),{
    route:{snapshot:{queryParamMap:new Map<string,string>()}},
+   location:{loadSavedCoordinates:vi.fn().mockResolvedValue(null)},
    session:{currentSession:()=>({kind:'demo',userId:'member'}),logout:vi.fn().mockResolvedValue(undefined)},
    users:{loadUserById:vi.fn().mockResolvedValue(user),saveUserProfile:vi.fn(async user=>user),checkLocationEligibility:vi.fn().mockResolvedValue({eligible:true})},
    selector:{closeDemoBootstrapSelector:vi.fn()},profiles:{setActiveUserId:vi.fn(),setActiveUserProfile:vi.fn()},
    privacy:{activeRevision:()=>({id:'privacy',version:1}),loadConsent:vi.fn().mockResolvedValue({revisionId:'privacy',revisionVersion:1})},
    dialogs:{open:vi.fn()},i18n:{translateParams:()=> 'Restore your account'},deployment:{branding:()=>({productName:'Templates'})},
-   editor:{begin:vi.fn()},router:{navigateByUrl:vi.fn().mockResolvedValue(true)},error:signal('')
+   editor:{begin:vi.fn()},destroyRef:{destroyed:false},profileEditorHostComponent:signal(null),
+   popupAdapters:{load:vi.fn().mockResolvedValue({ProfileEditorHostComponent:class {}})},injector:{get:vi.fn()},router:{navigateByUrl:vi.fn().mockResolvedValue(true)},error:signal('')
   });
+  context.injector.get.mockReturnValue(context.editor);
   return {context,user};
  }
  it('waits for confirmation, restores the previous status and keeps the same account',async()=>{

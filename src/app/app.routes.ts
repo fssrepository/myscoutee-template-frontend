@@ -2,20 +2,19 @@ import { inject, Injector } from '@angular/core';
 import { CanActivateFn, ResolveFn, Router, Routes } from '@angular/router';
 import { environment } from '../environments/environment';
 import { SessionService } from './shared/core/base/services/accounts/session.service';
-import { UsersService } from './shared/core/base/services/accounts/users.service';
 import { PrivacyPolicyService } from './shared/core/base/services/help/privacy-policy.service';
 
 const sessionGuard: CanActivateFn = async (route, state) => {
  const injector = inject(Injector);
  const sessionService = inject(SessionService);
- const users = inject(UsersService);
  const privacy = inject(PrivacyPolicyService);
  const router = inject(Router);
  const entry = () => router.createUrlTree(['/entry'], { queryParams: state.url && state.url !== '/' ? { redirect: state.url } : undefined });
  try {
   const session = await sessionService.ensureSession();
   if (!session) return entry();
-  if (session.kind === 'operator-bootstrap') return route.data['role'] === 'operator' ? true : router.createUrlTree(['/operator']);
+  const { UsersService } = await import('./shared/core/base/services/accounts/users.service');
+  const users = injector.get(UsersService);
   if (users.localModeEnabled) {
    const { SeedDemoBootstrapService } = await import('./shared/core/local/seed/services/platform/demo-bootstrap.service');
    await injector.get(SeedDemoBootstrapService).ensureDemoSelectorReady('union');

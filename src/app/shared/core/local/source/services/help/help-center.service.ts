@@ -246,9 +246,9 @@ export class LocalHelpCenterService {
     return table.revisionIds
       .map(id => table.revisionsById[id])
       .filter((revision): revision is HelpCenterRevisionRecord => Boolean(revision))
-      .map(revision => LocalHelpCenterMapper.toDto(revision))
       .filter(revision => this.revisionKind(revision) === kind && this.revisionLang(revision) === language)
-      .filter(revision => kind !== 'explanation' || !context || this.revisionContextKey(revision) === context);
+      .filter(revision => kind !== 'explanation' || !context || this.revisionContextKey(revision) === context)
+      .map(revision => LocalHelpCenterMapper.toDto(revision));
   }
 
   private normalizeSections(sections: readonly HelpCenterSectionDto[], kind: HelpCenterDocumentKind): HelpCenterSectionDto[] {
@@ -400,11 +400,11 @@ export class LocalHelpCenterService {
     return HelpCenterContentBuilder.defaultSectionIcon(kind);
   }
 
-  private revisionKind(revision: HelpCenterRevisionDto | null | undefined): HelpCenterDocumentKind {
+  private revisionKind(revision: Pick<HelpCenterRevisionRecord, 'documentKind'> | null | undefined): HelpCenterDocumentKind {
     return this.normalizeKind(revision?.documentKind);
   }
 
-  private revisionLang(revision: HelpCenterRevisionDto | null | undefined): string {
+  private revisionLang(revision: Pick<HelpCenterRevisionRecord, 'lang'> | null | undefined): string {
     return this.normalizeLang(revision?.lang);
   }
 
@@ -434,7 +434,7 @@ export class LocalHelpCenterService {
     return null;
   }
 
-  private revisionContextKey(revision: HelpCenterRevisionDto | null | undefined): string | null {
+  private revisionContextKey(revision: Pick<HelpCenterRevisionRecord, 'documentKind' | 'contextKey'> | null | undefined): string | null {
     return this.normalizeContextKey(this.revisionKind(revision), revision?.contextKey, false);
   }
 

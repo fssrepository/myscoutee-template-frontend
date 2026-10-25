@@ -1,5 +1,6 @@
 import { HTTP_ADAPTER, LOCAL_ADAPTER } from '../../adapter-loaders';
 import { AdapterProxyService } from '../platform/adapter-proxy.service';
+import { AppLocationService } from './app-location.service';
 
 import type { BootstrapProcessState } from '../platform/bootstrap.service';
 import { Injectable, inject } from '@angular/core';
@@ -14,6 +15,7 @@ export const USER_LOGOUT_CONTEXT_KEY = 'user-logout';
 @Injectable({ providedIn: 'root' })
 export class UsersService extends BaseRouteModeService {
   private readonly transportAdapters = inject(AdapterProxyService);
+  private readonly location = inject(AppLocationService);
 
  private readonly local = this.transportAdapters.reference(LOCAL_ADAPTER.USERS);
  private readonly http = this.transportAdapters.reference(HTTP_ADAPTER.USERS);
@@ -39,7 +41,12 @@ export class UsersService extends BaseRouteModeService {
  }
  get localModeEnabled(): boolean { return this.isLocalRouteEnabled('/auth/me'); }
  loadAvailableDemoUsers(role: UserSelectorRole = 'member') { return this.resolveRouteService('/auth/demo-users', this.local, this.http).queryAvailableDemoUsers(role); }
- checkLocationEligibility(coordinates?: LocationCoordinates | null) { return this.userService.checkLocationEligibility(coordinates); }
+ async checkLocationEligibility(coordinates?: LocationCoordinates | null) {
+   const service = this.isLocalRouteEnabled('/auth/me')
+     ? this.local
+     : await this.transportAdapters.get(HTTP_ADAPTER.USERS);
+   return service.checkLocationEligibility(coordinates);
+ }
  private get userService() { return this.resolveRouteService('/auth/me', this.local, this.http); }
  async loadUserById(userId?: string): Promise<UserDto | null> {
   const session = this.sessionService.identity();
@@ -61,7 +68,11 @@ export class UsersService extends BaseRouteModeService {
   const session = this.sessionService.identity();
   this.runtime.setStatus(USER_PROFILE_SAVE_CONTEXT_KEY, 'loading');
   try {
-   const result = await this.userService.saveUserProfile(user);
+   const account = this.sessionService.currentSession();
+   const coordinates = !user.locationCoordinates && account?.kind === 'authenticated'
+     ? await this.location.pendingLoginCoordinates(account.profile.id) : null;
+   if (session !== this.sessionService.identity()) return null;
+   const result = await this.userService.saveUserProfile(coordinates ? { ...user, locationCoordinates: coordinates } : user);
    if (session !== this.sessionService.identity()) return null;
    if (!result) throw new Error('Profile save returned no user.');
    this.profiles.setUserProfile(result);

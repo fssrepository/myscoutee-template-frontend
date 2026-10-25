@@ -53,3 +53,13 @@ app-menu { max-width: 100%; }
 @media (max-width: 600px) {
   .app-setup-help { grid-template-columns: minmax(0, 1fr); }
 }
+
+.app-setup-browser {
+  padding: 0.8rem;
+  border: 2px solid #edbd6b;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #fff5cf, #fff0f6);
+  color: #513a50;
+  h3 { color: #713cb0; }
+  p { font-weight: 500; }
+}

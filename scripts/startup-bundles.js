@@ -2,6 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
 const { rollup } = require('rollup');
+const { transform } = require('esbuild');
 const popupModuleGroups = require('../src/app/shared/ui/context/popup-module-groups.json');
 
 const LANDING_ENTRIES = [
@@ -85,6 +86,17 @@ async function consolidateStartupBundles(outputDir, { localAdaptersInStartup = f
   try {
     ({ output } = await bundle.generate({
       format: 'es', compact: true, hashCharacters: 'hex',
+      // Regrouping regenerates local names and syntax after Angular minification.
+      // Minify before Rollup hashes files and resolves their import references.
+      plugins: [{
+        name: 'minify-consolidated-bundles',
+        async renderChunk(code) {
+          const result = await transform(code, {
+            minify: true, format: 'esm', target: 'es2022', legalComments: 'eof'
+          });
+          return { code: result.code, map: null };
+        }
+      }],
       entryFileNames: 'main-[hash].js', chunkFileNames: 'chunk-[hash].js',
       onlyExplicitManualChunks: true,
       manualChunks(id, { getModuleInfo, getModuleIds }) {
@@ -106,9 +118,9 @@ async function consolidateStartupBundles(outputDir, { localAdaptersInStartup = f
           // keep transport constructors independent of the controls they serve.
           for (const [phase, roots] of [
             ['entry-popups', [
-              findEntry('src/app/shared/ui/components/explanation-popup/explanation-popup.component.ts')
+              ...Object.entries(metadata.outputs).filter(([, info]) => /components-core-tour-dialog\.component-/.test(info.entryPoint ?? '')).map(([name]) => outputFile(name))
             ].filter(Boolean)],
-            ['public-dialogs', popupModuleGroups.publicDialogs.map(findEntry).filter(Boolean)],
+            ['public-dialogs', [...popupModuleGroups.publicDialogs.map(findEntry), ...Object.entries(metadata.outputs).filter(([, info]) => /components-core-explanation-dialog\.component-/.test(info.entryPoint ?? '')).map(([name]) => outputFile(name))].filter(Boolean)],
             ['workspace-adapters', localAdaptersInStartup ? [] : [findEntry(workspaceAdapters)].filter(Boolean)],
             ['member-controls', controls]
           ]) {

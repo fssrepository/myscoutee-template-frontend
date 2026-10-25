@@ -1,5 +1,8 @@
+import { SessionService } from './shared/core/base/services/accounts/session.service';
+import { sessionAuthInterceptor } from './shared/core/http/interceptors/accounts/session-auth.interceptor';
 import { anonymousLanding } from './shared/core/common/demo-failover';
 import { I18nService } from './shared/core/base/services/localization/i18n.service';
+import { DeploymentConfigurationService } from './shared/core/base/services/platform/deployment-configuration.service';
 import { connectivityInterceptor } from './shared/core/http/interceptors/platform/connectivity.interceptor';
 import { ApplicationConfig, inject, provideAppInitializer, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { provideHttpClient, withInterceptors, withXhr } from '@angular/common/http';
@@ -7,19 +10,28 @@ import { routes } from './app.routes';
 import { provideRouter } from '@angular/router';
 import { SHARED_UI_PROVIDERS } from './shared/ui/context/ui.providers';
 import { sessionModeInterceptor } from './shared/core/http/interceptors/accounts/session-mode.interceptor';
-import { firebaseAuthInterceptor } from './shared/core/http/interceptors/accounts/firebase-auth.interceptor';
-import { operatorBootstrapAuthInterceptor } from './shared/core/http/interceptors/operator/operator-bootstrap-auth.interceptor';
-import { adminAccessInterceptor } from './shared/core/http/interceptors/access/admin-access.interceptor';
 import { environment } from '../environments/environment';
 import { ROUTE_CONFIG } from './shared/core/base/config';
 import { preloadAdapterMode, type AdapterMode } from './shared/core/base/adapter-loaders';
 export const appConfig: ApplicationConfig={
   providers: [
-    provideAppInitializer(() => inject(I18nService).initialize()),
+    provideAppInitializer(initializeApplication),
     ...SHARED_UI_PROVIDERS,provideBrowserGlobalErrorListeners(),provideRouter(routes),
-    provideHttpClient(withXhr(), withInterceptors([connectivityInterceptor,sessionModeInterceptor,operatorBootstrapAuthInterceptor,firebaseAuthInterceptor,adminAccessInterceptor]))
+    provideHttpClient(withXhr(), withInterceptors([
+      connectivityInterceptor,
+      sessionModeInterceptor,
+      sessionAuthInterceptor
+    ])),
   ]
 };
+
+export function initializeApplication(): Promise<void> {
+  const translations = inject(I18nService).initialize();
+  void inject(DeploymentConfigurationService).initialize().catch(() => {
+    // The root component observes the same load and reports initialization errors.
+  });
+  return Promise.all([translations, inject(SessionService).ensureSession()]).then(() => undefined);
+}
 
 export async function loadAppConfig(): Promise<ApplicationConfig> {
   const modes = new Set<AdapterMode>([environment.activitiesDataSource]);

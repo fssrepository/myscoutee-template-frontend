@@ -52,8 +52,6 @@ export const APP_STORAGE_KEYS = {
   messagingToken: scopedStorageKey('messaging.token.v1'),
   messagingUserId: scopedStorageKey('messaging.user-id.v1'),
   optionalPrivacyApprovals: scopedStorageKey('privacy.optional-approvals.v1'),
-  operatorBootstrapSession: scopedStorageKey('operator-bootstrap.session.v1'),
-  operatorBootstrapToken: scopedStorageKey('operator-bootstrap.token.v1'),
   pwaInstallPromptDismissed: 'myscoutee-template.install-prompt.dismissed',
   pwaLoginInstallPromptOffered: 'myscoutee-template.install-prompt.login-offered',
   pwaUpdateReloadAttempt: 'myscoutee-template.update-reload-attempt',

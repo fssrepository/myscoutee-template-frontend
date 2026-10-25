@@ -54,12 +54,8 @@ export class SeedHelpCenterRepository {
     const language = this.normalizeLang(lang);
     const context = this.normalizeContextKey(kind, contextKey);
     const existingRevisions = this.revisionsForKind(table, kind, language, context);
-    const revision = this.cloneRevision(SeedHelpCenterContentBuilder.defaultRevision(
-      kind,
-      language,
-      context,
-      key => this.i18n.translateForLanguage(key, language)
-    ), kind);
+    // Identity/version checks do not need translation catalogs or translated sections.
+    let revision = this.cloneRevision(SeedHelpCenterContentBuilder.defaultRevision(kind, language, context), kind);
     const upgradeSystemRevision = kind === 'help' && existingRevisions.length > 0
       && existingRevisions.every(value => value.version < revision.version
         && value.createdByUserId === 'system' && value.updatedByUserId === 'system');
@@ -75,6 +71,11 @@ export class SeedHelpCenterRepository {
     if (existingRevisions.length > 0 && !upgradeSystemRevision && !shouldSeedExplanationTour) {
       return this.ensureActiveRevision(table, kind, language, context, existingRevisions);
     }
+
+    await this.i18n.ensureLanguageLoaded(language);
+    revision = this.cloneRevision(SeedHelpCenterContentBuilder.defaultRevision(
+      kind, language, context, key => this.i18n.translateForLanguage(key, language)
+    ), kind);
 
     if (kind === 'explanation') revision.active = shouldActivateExplanationTour || existingRevisions.length === 0;
     const shouldSetActiveRevision = shouldActivateExplanationTour || existingRevisions.length === 0
@@ -169,9 +170,9 @@ export class SeedHelpCenterRepository {
     return table.revisionIds
       .map(id => table.revisionsById[id])
       .filter((revision): revision is HelpCenterRevisionRecord => Boolean(revision))
-      .map(revision => LocalHelpCenterMapper.toDto(revision))
       .filter(revision => this.revisionKind(revision) === kind && this.revisionLang(revision) === language)
-      .filter(revision => kind !== 'explanation' || !context || this.revisionContextKey(revision) === context);
+      .filter(revision => kind !== 'explanation' || !context || this.revisionContextKey(revision) === context)
+      .map(revision => LocalHelpCenterMapper.toDto(revision));
   }
 
   private normalizedRevisionsById(table: HelpCenterTable): Record<string, HelpCenterRevisionRecord> {
@@ -179,14 +180,16 @@ export class SeedHelpCenterRepository {
       table.revisionIds
         .filter(id => Boolean(table.revisionsById[id]))
         .map(id => {
-          const revision = LocalHelpCenterMapper.toDto(table.revisionsById[id]!);
-          const lang = this.revisionLang(revision);
+          const record = table.revisionsById[id]!;
+          const documentKind = this.revisionKind(record);
+          const lang = this.revisionLang(record);
+          const contextKey = this.revisionContextKey(record);
+          const languageLabel = this.languageLabel(lang);
+          // Keep current guide sections instead of copying them for every seed insertion.
+          if (record.documentKind === documentKind && record.lang === lang
+            && record.contextKey === contextKey && record.languageLabel === languageLabel) return [id, record];
           return [id, LocalHelpCenterMapper.toRecord({
-            ...revision,
-            documentKind: this.revisionKind(revision),
-            contextKey: this.revisionContextKey(revision),
-            lang,
-            languageLabel: this.languageLabel(lang)
+            ...LocalHelpCenterMapper.toDto(record), documentKind, contextKey, lang, languageLabel
           })];
         })
     ) as Record<string, HelpCenterRevisionRecord>;
@@ -230,7 +233,7 @@ export class SeedHelpCenterRepository {
     };
   }
 
-  private revisionKind(revision: HelpCenterRevisionDto | null | undefined): HelpCenterDocumentKind {
+  private revisionKind(revision: Pick<HelpCenterRevisionRecord, 'documentKind'> | null | undefined): HelpCenterDocumentKind {
     const kind = revision?.documentKind;
     if (kind === 'privacy' || kind === 'terms' || kind === 'explanation') {
       return kind;
@@ -238,11 +241,11 @@ export class SeedHelpCenterRepository {
     return 'help';
   }
 
-  private revisionLang(revision: HelpCenterRevisionDto | null | undefined): string {
+  private revisionLang(revision: Pick<HelpCenterRevisionRecord, 'lang'> | null | undefined): string {
     return this.normalizeLang(revision?.lang);
   }
 
-  private revisionContextKey(revision: HelpCenterRevisionDto | null | undefined): string | null {
+  private revisionContextKey(revision: Pick<HelpCenterRevisionRecord, 'documentKind' | 'contextKey'> | null | undefined): string | null {
     return this.normalizeContextKey(this.revisionKind(revision), revision?.contextKey);
   }
 
@@ -268,16 +271,20 @@ export class SeedHelpCenterRepository {
     const context = this.normalizeContextKey(kind, contextKey);
     return context ? `${kind}:${this.normalizeLang(lang)}:${context}` : `${kind}:${this.normalizeLang(lang)}`;
   }
- async seedDefaults(): Promise<boolean> {
-  await this.memoryDb.whenReady();
-  let changed = false;
-  for (const option of this.availableLanguages()) {
-   await this.i18n.ensureLanguageLoaded(option.lang);
-   for (const kind of ['help','privacy','terms'] as const) changed = await this.ensureSeeded(kind, option.lang) || changed;
-   for (const context of SeedHelpCenterContentBuilder.explanationBootstrapContextKeys()) changed = await this.ensureSeeded('explanation', option.lang, context) || changed;
+  async seedDefaults(requestedLanguage?: string): Promise<boolean> {
+    await this.memoryDb.whenReady();
+    let changed = false;
+    const language = requestedLanguage === undefined ? undefined : this.normalizeLang(requestedLanguage);
+    for (const option of this.availableLanguages().filter(option => !language || option.lang === language)) {
+      for (const kind of ['help', 'privacy', 'terms'] as const) {
+        changed = await this.ensureSeeded(kind, option.lang) || changed;
+      }
+      for (const context of SeedHelpCenterContentBuilder.explanationBootstrapContextKeys()) {
+        changed = await this.ensureSeeded('explanation', option.lang, context) || changed;
+      }
+    }
+    changed = this.ensureGuideFields() || changed;
+    if (changed) await this.memoryDb.flushToIndexedDb();
+    return changed;
   }
-  changed = this.ensureGuideFields() || changed;
-  if (changed) await this.memoryDb.flushToIndexedDb();
-  return changed;
- }
 }

@@ -1,14 +1,14 @@
 import { GUIDE_CONTEXT } from '@fssrepository/myscoutee-components';
 import { ExplanationGuideService } from '../../shared/core/base/services/help/explanation-guide.service';
-import { ProfileEditorHostComponent } from '../../shared/ui/components/profile-editor-host/profile-editor-host.component';
 import { preloadAdapterMode } from '../../shared/core/base/adapter-loaders';
 import { AppSetupStore } from '../../shared/ui/context/stores/app/app-setup.store';
+import { frontendUnavailable } from '../../shared/core/common/backend-connectivity';
+import { AppRuntimeStore } from '../../shared/ui/context/stores/app/app-runtime.store';
 import { UserProfileStore } from '../../shared/ui/context/stores/profile/user-profile.store';
-import { ProfileEditorStore } from '../../shared/ui/context/stores/profile/profile-editor.store';
 import { NgComponentOutlet } from '@angular/common';
 import { AppLocationService } from '../../shared/core/base/services/accounts/app-location.service';
 import type { UserDto } from '../../shared/core/contracts/accounts/user.interface';
-import { Component, DestroyRef, ErrorHandler, OnInit, OnDestroy, ViewContainerRef, computed, effect, inject, inputBinding, outputBinding, signal, untracked, viewChild, type Type, ChangeDetectionStrategy } from '@angular/core';
+import { Component, DestroyRef, ErrorHandler, Injector, OnInit, OnDestroy, ViewContainerRef, computed, effect, inject, inputBinding, outputBinding, signal, untracked, viewChild, type Type, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DeploymentBrandComponent, IndicatorComponent, PopupComponent, I18nPipe, DialogStore, AppMenuComponent, type AppMenuItem } from '@fssrepository/myscoutee-components';
 import { MatIconModule } from '@angular/material/icon';
@@ -25,7 +25,7 @@ import type { DocumentViewerActionEvent, DocumentViewerConfig } from '../../shar
 import type { FirebaseAuthRequestDto, EntryConsentStateDto, EntryConsentAuditRecordDto } from '../../shared/core/contracts/accounts/user.interface';
 import { SessionService } from '../../shared/core/base/services/accounts/session.service';
 import { FirebaseAppService } from '../../shared/core/base/services/accounts/firebase-app.service';
-import { UsersService } from '../../shared/core/base/services/accounts/users.service';
+import type { UsersService } from '../../shared/core/base/services/accounts/users.service';
 import { PrivacyPolicyService } from '../../shared/core/base/services/help/privacy-policy.service';
 import { DeploymentConfigurationService } from '../../shared/core/base/services/platform/deployment-configuration.service';
 import { PwaService } from '../../shared/core/base/services/platform/pwa.service';
@@ -36,7 +36,7 @@ import { DemoBootstrapSelectorStore } from '../../shared/ui/context/stores/app/d
 
 @Component({
   selector: 'app-entry-page', standalone: true,
-  imports: [ProfileEditorHostComponent, DeploymentBrandComponent, AppMenuComponent, MatIconModule, MatRippleModule, NgComponentOutlet, IndicatorComponent, PopupComponent, I18nPipe, ExplanationLauncherComponent, LandingGuideSurfaceDirective],
+  imports: [DeploymentBrandComponent, AppMenuComponent, MatIconModule, MatRippleModule, NgComponentOutlet, IndicatorComponent, PopupComponent, I18nPipe, ExplanationLauncherComponent, LandingGuideSurfaceDirective],
   providers: [{ provide: GUIDE_CONTEXT, useExisting: ExplanationGuideService }, { provide: ExplanationGuideService, useExisting: LANDING_EXPLANATION_GUIDE }],
   templateUrl: './entry-page.component.html', changeDetection: ChangeDetectionStrategy.Eager,
  styleUrl: './entry-page.component.scss'
@@ -45,11 +45,13 @@ export class EntryPageComponent implements OnInit, OnDestroy {
   private readonly popupAdapters = inject(PopupAdapterProxyService);
   private readonly popupErrors = inject(ErrorHandler);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly injector = inject(Injector);
   private readonly privacyDocumentHost = viewChild('privacyDocumentHost', { read: ViewContainerRef });
   private readonly authPopupHost = viewChild('authPopupHost', { read: ViewContainerRef });
   protected readonly setupPopupComponent = signal<Type<unknown> | null>(null);
   protected readonly documentViewerComponent = signal<Type<DocumentViewerComponent> | null>(null);
   protected readonly authPopupComponent = signal<Type<EntryFirebaseAuthPopupComponent> | null>(null);
+  protected readonly profileEditorHostComponent = signal<Type<unknown> | null>(null);
   protected readonly deployment = inject(DeploymentConfigurationService);
   protected readonly pwa = inject(PwaService);
   protected readonly session = inject(SessionService);
@@ -61,15 +63,16 @@ export class EntryPageComponent implements OnInit, OnDestroy {
   protected readonly localMode = environment.activitiesDataSource === 'local';
   protected readonly exploreItems = computed<readonly AppMenuItem[]>(() => [{
     id: 'explore', label: 'explore', icon: 'rocket_launch', kind: 'action',
-    layout: 'action', palette: 'brand', disabled: this.busy()
+    layout: 'action', palette: 'brand', disabled: this.busy() || this.frontendOffline()
   }]);
   protected readonly setup = inject(AppSetupStore);
-  protected readonly editor = inject(ProfileEditorStore);
+  private readonly runtime = inject(AppRuntimeStore);
+  protected readonly frontendOffline = computed(() => !this.runtime.isOnline() || frontendUnavailable());
   private readonly location = inject(AppLocationService);
   private readonly profiles = inject(UserProfileStore);
   private readonly dialogs = inject(DialogStore);
   private readonly firebase = inject(FirebaseAppService);
-  private readonly users = inject(UsersService);
+  private users: UsersService | undefined;
   private readonly selector = inject(DemoBootstrapSelectorStore);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -134,8 +137,8 @@ export class EntryPageComponent implements OnInit, OnDestroy {
       if (!host || !component) return;
       const ref = untracked(() => host.createComponent(component, { bindings: [
         inputBinding('open', () => this.authOpen()),
-        inputBinding('busy', () => this.session.firebaseBusy()),
-        inputBinding('statusMessage', () => this.session.firebaseNotice() || this.error()),
+        inputBinding('busy', () => this.session.authBusy()),
+        inputBinding('statusMessage', () => this.session.authNotice() || this.error()),
         outputBinding<void>('closeRequested', () => this.authOpen.set(false)),
         outputBinding<FirebaseAuthRequestDto>('authRequested', event => { void this.authenticate(event); })
       ] }));
@@ -253,9 +256,9 @@ export class EntryPageComponent implements OnInit, OnDestroy {
       mode: mode === 'operator' ? 'operator' : 'member',
       selectableModes: mode === 'operator' ? ['operator'] : ['member', 'admin', 'operator'],
       onSelect: async (userId) => {
-        const session = this.localMode ? this.session.startDemoSession(userId) : await this.session.startTrackedDemoSession(userId);
-        if (!session) return this.i18n.translate(this.session.firebaseNotice() || 'demo.session.open.error');
         try {
+          const session = this.localMode ? this.session.startDemoSession(userId) : await this.session.startTrackedDemoSession(userId);
+          if (!session) return this.i18n.translate(this.session.authNotice() || 'demo.session.open.error');
           return await this.finishEntry();
         }
         catch { this.error.set('entry.user.open.error'); return false; }
@@ -263,17 +266,24 @@ export class EntryPageComponent implements OnInit, OnDestroy {
     });
   }
 
+  private async loadUsersService(): Promise<UsersService> {
+    if (this.users) return this.users;
+    const { UsersService } = await import('../../shared/core/base/services/accounts/users.service');
+    return this.users ??= this.injector.get(UsersService);
+  }
+
   private async finishEntry(): Promise<boolean> {
     const session = this.session.currentSession();
     if (!session) return false;
-    if (session.kind === 'operator-bootstrap') return this.router.navigateByUrl('/operator');
+    if (session.kind === 'authenticated') return this.router.navigateByUrl('/operator');
+    const users = await this.loadUsersService();
     const cachedUser = this.localMode && session.kind === 'demo'
-      ? this.users.peekCachedUserById(session.userId) : null;
+      ? users.peekCachedUserById(session.userId) : null;
     const localWorkspaceUser = cachedUser
       && ['/home', '/admin', '/operator'].includes(this.workspaceDestination(cachedUser).split(/[?#]/, 1)[0]);
     // Use the prepared local profile for entry gates. Every workspace loads
     // the profile through the same avatar indicator after navigation.
-    let user = localWorkspaceUser ? cachedUser : await this.users.loadUserById(session.kind === 'demo' ? session.userId : undefined);
+    let user = localWorkspaceUser ? cachedUser : await users.loadUserById(session.kind === 'demo' ? session.userId : undefined);
     if (!user) throw new Error('User not found.');
     // Account consent belongs to the destination in the native entry flow.
     // MCP authorization has no member shell, so it retains its entry check.
@@ -296,8 +306,14 @@ export class EntryPageComponent implements OnInit, OnDestroy {
     }
     if (!user.admin && !user.operator && !await this.ensureLocationAllowed(user)) return false;
     if (user.profileStatus === 'onboarding') {
+      const [{ ProfileEditorStore }, module] = await Promise.all([
+        import('../../shared/ui/context/stores/profile/profile-editor.store'),
+        this.popupAdapters.load(POPUP_ADAPTER.PROFILE_EDITOR_HOST)
+      ]);
+      if (this.destroyRef.destroyed) return false;
       this.profiles.setActiveUserProfile(user);
-      this.editor.begin({ onSaved: saved => this.enterWorkspace(saved).then(() => undefined), onCancel: () => this.cancelEntry() });
+      this.profileEditorHostComponent.set(module.ProfileEditorHostComponent);
+      this.injector.get(ProfileEditorStore).begin({ onSaved: saved => this.enterWorkspace(saved).then(() => undefined), onCancel: () => this.cancelEntry() });
       return true;
     }
     return this.enterWorkspace(user);
@@ -321,12 +337,17 @@ export class EntryPageComponent implements OnInit, OnDestroy {
   }
 
   private async ensureLocationAllowed(user: UserDto): Promise<boolean> {
-    const eligibility = await this.users.checkLocationEligibility(user.locationCoordinates);
-    if (eligibility.eligible) return true;
+    const users = await this.loadUsersService();
+    const coordinates = user.locationCoordinates ?? await this.location.loadSavedCoordinates();
+    const eligibility = await users.checkLocationEligibility(coordinates);
+    if (eligibility.eligible) {
+      return !user.locationCoordinates && coordinates
+        ? this.location.saveCurrentCoordinates(coordinates) : true;
+    }
     if (!eligibility.locationRequired) throw new Error(eligibility.message || 'Unavailable in your country');
     const identity = this.session.identity();
     const allowed = await this.setup.requestForLogin(async coordinates => {
-      const result = await this.users.checkLocationEligibility(coordinates);
+      const result = await users.checkLocationEligibility(coordinates);
       if (!result.eligible) throw new Error(result.message || 'Unavailable in your country');
       if (identity !== this.session.identity()) return false;
       return this.location.saveCurrentCoordinates(coordinates);
@@ -352,7 +373,7 @@ export class EntryPageComponent implements OnInit, OnDestroy {
         onConfirm: async () => {
           const previous = user.previousProfileStatus;
           const profileStatus = previous && ['blocked', 'friends only', 'host only', 'inactive', 'public'].includes(previous) ? previous : 'public';
-          const saved = await this.users.saveUserProfile({ ...user, profileStatus, previousProfileStatus: null, deletedAtIso: null });
+          const saved = await (await this.loadUsersService()).saveUserProfile({ ...user, profileStatus, previousProfileStatus: null, deletedAtIso: null });
           if (!saved) throw new Error('Unable to reactivate account.');
           resolve(saved);
         }

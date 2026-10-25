@@ -16,7 +16,9 @@
   @if (error()) { <p class="entry-error" role="alert">{{ error() | i18n }}</p> }
   @if (pwa.appVersionLabel()) { <span class="version" data-i18n-ignore>{{ pwa.appVersionLabel() }}</span> }
 </main>
-<app-explanation-launcher [introduce]="!busy()"/>
+@if (!frontendOffline()) {
+  <app-explanation-launcher [introduce]="!busy()"/>
+}
 @if (consentOpen()) {
   <ng-container #privacyDocumentHost />
   @if (!documentViewerComponent()) {
@@ -39,4 +41,6 @@
     <app-indicator kind="load-ring" state="loading" />
   </app-popup>
 }
-<app-profile-editor-host />
+@if (profileEditorHostComponent(); as component) {
+  <ng-container *ngComponentOutlet="component" />
+}

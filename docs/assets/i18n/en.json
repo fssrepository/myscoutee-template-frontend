@@ -1,6 +1,6 @@
 {
   "lang": "en",
-  "version": "2026.10.21.2",
+  "version": "2026.10.25.1",
   "messages": {
     "clipboard.paste.permission.help": "Allow clipboard access in site settings, then retry.",
     "accommodation": "Accommodation",
@@ -54,8 +54,8 @@
     "explanation": "Explanation",
     "explore": "Explore",
     "operator.bootstrap.auth.invalid": "The installer operator email or password is incorrect.",
-    "operator.bootstrap.auth.throttled": "Too many operator sign-in attempts. Try again later.",
-    "operator.bootstrap.auth.failed": "The dedicated operator sign-in is temporarily unavailable.",
+    "auth.session.login.throttled": "Too many sign-in attempts. Try again later.",
+    "auth.session.login.failed": "Sign-in failed. Check your details and try again.",
     "operator.bootstrap.auth.response.invalid": "The server returned an invalid operator sign-in response.",
     "This email is already registered. Use login instead.": "This email is already registered. Use login instead.",
     "Email or password is incorrect.": "Email or password is incorrect.",
@@ -1817,6 +1817,9 @@
     "notifications.open.count.aria": "Open notifications, {count} new",
     "notifications.open.muted.count.aria": "Open notifications, {count} new, alerts muted",
     "account.deletion.retention.warning": "You can reactivate within 30 days. After that, the account is permanently purged.",
-    "operator.workspace.title": "Operator workspace"
+    "operator.workspace.title": "Operator workspace",
+    "app.setup.open.browser": "Open in external browser",
+    "app.setup.open.browser.help": "Your location is needed for nearby people and events. Facebook/Instagram may block access; open this page in an external browser.",
+    "explanation.loading.aria": "Loading explanation"
   }
 }

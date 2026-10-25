@@ -55,14 +55,15 @@ describe('MCP authorization refusal routes', () => {
     expect(loadConsent).not.toHaveBeenCalled();
   });
 
-  it.each([true, false])('does not let a bootstrap operator authorize (local=%s)', async localMode => {
+  it.each([true, false])('applies the same consent gate to authenticated operator accounts (local=%s)', async localMode => {
     configure(localMode);
-    ensureSession.mockResolvedValue({ kind: 'operator-bootstrap', email: 'operator@fixture.test', expiresAt: '2099-01-01T00:00:00Z' });
+    ensureSession.mockResolvedValue({ kind: 'authenticated', profile: { id: 'operator' } });
+    loadUserById.mockResolvedValue({ id: 'operator', profileStatus: 'active', operator: true });
     const result = await activate();
-    expect(result).toBeInstanceOf(UrlTree);
-    expect(TestBed.inject(Router).serializeUrl(result as UrlTree)).toBe('/operator');
-    expect(loadUserById).not.toHaveBeenCalled();
-    expect(prepareOpen).not.toHaveBeenCalled();
+    if (localMode) expect(result).toBe(true);
+    else { expect(result).toBeInstanceOf(UrlTree); expect(TestBed.inject(Router).serializeUrl(result as UrlTree).split('?')[0]).toBe('/entry'); }
+    expect(loadUserById).toHaveBeenCalled();
+    expect(prepareOpen).toHaveBeenCalledTimes(localMode ? 0 : 1);
     expect(loadConsent).not.toHaveBeenCalled();
   });
 });

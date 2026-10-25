@@ -19,6 +19,7 @@ describe('Guide launcher loading indication', () => {
       providers: [
         { provide: ExplanationGuideService, useValue: {
           popupOpen: open, loading, launcherVisible: () => false,
+          popupMode: () => 'tour', dialogModel: () => null,
           hasVisiblePopup: visible, currentContextKey: () => 'landing.home'
         } },
         { provide: PopupPresenceStore, useValue: { topLayer: () => 0 } },

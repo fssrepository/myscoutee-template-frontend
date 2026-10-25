@@ -47,7 +47,7 @@ describe('logout confirmation uses the native user action before clearing the se
     expect(component.router.navigateByUrl).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1);
     await pending;
-    expect(component.session.logout).toHaveBeenCalledOnce();
+    expect(component.session.logout).toHaveBeenCalledExactlyOnceWith({ sessionAlreadyRevoked: true });
     expect(component.profiles.setActiveUserId).toHaveBeenCalledWith('');
     expect(component.router.navigateByUrl).toHaveBeenCalledWith('/entry');
     expect(httpLogout).not.toHaveBeenCalled();
@@ -58,7 +58,7 @@ describe('logout confirmation uses the native user action before clearing the se
     await component.selectSetting('logout');
     await component.dialogs.open.mock.calls[0][0].onConfirm();
     expect(httpLogout).toHaveBeenCalledWith({ userId: 'member' }, expect.any(AbortSignal), undefined);
-    expect(component.session.logout).toHaveBeenCalledOnce();
+    expect(component.session.logout).toHaveBeenCalledExactlyOnceWith({ sessionAlreadyRevoked: true });
     expect(vi.getTimerCount()).toBe(0);
   });
 

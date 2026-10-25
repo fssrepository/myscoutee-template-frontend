@@ -23,6 +23,7 @@ export class AppSetupStore implements OnDestroy {
   private readonly locationEdited = signal(false);
   private readonly notificationsEdited = signal(false);
   readonly locationGranted = signal(false);
+  readonly locationAvailable = computed(() => this.location.browserCoordinates() !== null);
   readonly locationPermission = signal<PermissionState | null>(null);
   readonly locationPermissionPending = signal(false);
   readonly nativePending = signal(false);
@@ -74,7 +75,7 @@ export class AppSetupStore implements OnDestroy {
     this.locationGranted.set(false);
     this.locationPermission.set(null);
     this.locationEdited.set(false);
-    this.locationSelected.set(false);
+    this.locationSelected.set(this.locationAvailable() && this.location.trackingEnabled());
     this.notificationsEdited.set(false);
     this.notificationsSelected.set(this.messaging.deviceNotificationsEnabled());
     // Show the popup immediately; only the controls that need async state wait.
@@ -82,6 +83,11 @@ export class AppSetupStore implements OnDestroy {
     this.notificationConfigurationPending.set(true);
     this.locationPermissionPending.set(true);
     this.isOpen.set(true);
+    void this.location.loadSavedCoordinates().then(() => {
+      if (generation === this.generation && !this.locationEdited()) {
+        this.locationSelected.set(this.locationAvailable() && this.location.trackingEnabled());
+      }
+    });
     void this.refreshPermissions();
     void this.messaging.prepareNotificationConfiguration().catch(() => undefined).then(() => {
       if (generation !== this.generation) return;
@@ -96,6 +102,7 @@ export class AppSetupStore implements OnDestroy {
     this.open();
     this.checkLocation = checkLocation;
     this.loginRequested.set(true);
+    this.locationSelected.set(this.locationAvailable() && this.location.trackingEnabled());
     return new Promise(resolve => { this.completeLogin = resolve; });
   }
 
@@ -114,7 +121,7 @@ export class AppSetupStore implements OnDestroy {
         if (this.locationRequestPending && permission.state === 'granted') {
           this.startLocationAcquisitionTimer();
         }
-        if (!this.locationEdited()) this.locationSelected.set(permission.state === 'granted' && this.location.trackingEnabled());
+
       };
       permission.onchange = update;
       update();
@@ -141,7 +148,7 @@ export class AppSetupStore implements OnDestroy {
   async allow(): Promise<void> {
     if (!this.isOpen() || this.nativePending() || this.allowDisabled()) return;
     this.clearSaveFeedback();
-    if ((!this.loggedIn() || this.checkLocation) && !this.locationSelected()) {
+    if ((this.loginRequested() || !this.loggedIn() || this.checkLocation) && !this.locationSelected()) {
       this.error.set(this.i18n.translate('entry.permissions.location.required'));
       return;
     }
@@ -161,8 +168,8 @@ export class AppSetupStore implements OnDestroy {
       }
       if (generation !== this.generation) return;
       const needsLocation = !!this.checkLocation || (this.loggedIn()
-        ? this.locationSelected() && (!this.locationGranted() || this.locationMissing())
-        : !this.locationGranted());
+        ? this.locationSelected() && (!this.locationAvailable() || this.locationMissing())
+        : !this.locationAvailable());
       if (!needsLocation) {
         this.location.setTrackingEnabled(this.locationSelected());
         this.nativePending.set(false);
@@ -175,10 +182,14 @@ export class AppSetupStore implements OnDestroy {
         }
         return;
       }
-      this.locationRequestPending = true;
-      this.locationRequestAbort = new AbortController();
-      if (this.locationPermission() === 'granted') this.startLocationAcquisitionTimer();
-      const coordinates = await this.location.requestCurrentCoordinates(this.locationRequestAbort.signal);
+      const savedCoordinates = !this.checkLocation ? this.location.browserCoordinates() : null;
+      if (!savedCoordinates) {
+        this.locationRequestPending = true;
+        this.locationRequestAbort = new AbortController();
+        if (this.locationPermission() === 'granted') this.startLocationAcquisitionTimer();
+      }
+      const coordinates = savedCoordinates
+        ?? await this.location.requestCurrentCoordinates(this.locationRequestAbort!.signal);
       if (generation !== this.generation) return;
       this.stopLocationRequest();
       if (!coordinates) {

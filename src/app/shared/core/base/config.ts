@@ -33,11 +33,11 @@ export interface ResolvedRouteConfig {
 }
 
 function demoRoutes(...routePrefixes: string[]): RouteConfigEntry[] {
-  return routePrefixes.map(routePrefix => ({ routePrefix, demoDelayMs: 1500 }));
+  return routePrefixes.map(routePrefix => ({ routePrefix, demoDelayMs: 0 }));
 }
 
 export const ROUTE_CONFIG: RouteConfig = {
-  defaultDemoDelayMs: 1500,
+  defaultDemoDelayMs: 0,
   defaultRequestTimeoutMs: 3000,
   defaultIntervalMs: 0,
   entries: [
@@ -49,11 +49,11 @@ export const ROUTE_CONFIG: RouteConfig = {
     ...demoRoutes('/auth/me/feedback', '/auth/me/experiences'),
     {
       routePrefix: '/auth/me/preferences',
-      demoDelayMs: 1500
+      demoDelayMs: 0
     },
     {
       routePrefix: '/auth/me/report-user',
-      demoDelayMs: 1500
+      demoDelayMs: 0
     },
     {
       routePrefix: '/auth/me/realtime/long-poll',
@@ -64,38 +64,38 @@ export const ROUTE_CONFIG: RouteConfig = {
     ...demoRoutes('/auth/me/logout', '/auth/me/delete'),
     {
       routePrefix: '/help',
-      demoDelayMs: 1500
+      demoDelayMs: 0
     },
     ...demoRoutes('/help/active', '/privacy'),
     {
       routePrefix: '/privacy/active',
-      demoDelayMs: 1500
+      demoDelayMs: 0
     },
     ...demoRoutes('/privacy/consents', '/terms'),
     {
       routePrefix: '/terms/active',
-      demoDelayMs: 1500
+      demoDelayMs: 0
     },
     ...demoRoutes('/explanation', '/explanation/active'),
     {
       routePrefix: '/notifications',
-      demoDelayMs: 1500,
+      demoDelayMs: 0,
       intervalMs: 30000,
       demoIntervalMs: 10000
     },
     {
       routePrefix: '/media/images/import',
-      demoDelayMs: 1500,
+      demoDelayMs: 0,
       requestTimeoutMs: 15000
     },
     {
       routePrefix: '/media/images',
-      demoDelayMs: 1500,
+      demoDelayMs: 0,
       requestTimeoutMs: 15000
     },
     {
       routePrefix: '/media/audio',
-      demoDelayMs: 1500,
+      demoDelayMs: 0,
       requestTimeoutMs: 20000
     }
   ]

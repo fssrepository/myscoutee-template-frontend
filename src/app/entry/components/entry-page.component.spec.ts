@@ -5,6 +5,7 @@ import { DemoBootstrapSelectorStore } from '../../shared/ui/context/stores/app/d
 
 function entry(localMode: boolean, pendingEntry: 'operator' | 'login' | 'explore') {
   return Object.assign(Object.create(EntryPageComponent.prototype), {
+    location: { loadSavedCoordinates: vi.fn().mockResolvedValue(null) },
     localMode, pendingEntry, authOpen: signal(false),
     session: { authMode: 'selector', setFirebaseRuntimeAvailable: vi.fn() },
     firebase: { ensureFirebaseRuntime: vi.fn() },
@@ -66,6 +67,24 @@ describe('Entry operator access parity', () => {
 });
 
 describe('demo selector handoff to the destination', () => {
+  it.each([true, false])('keeps the selector open when session initialization rejects (local=%s)', async localMode => {
+    const failure = new Error('Session unavailable');
+    const component = Object.assign(entry(localMode, 'explore'), {
+      session: {
+        startDemoSession: vi.fn(() => { throw failure; }),
+        startTrackedDemoSession: vi.fn().mockRejectedValue(failure)
+      },
+      finishEntry: vi.fn(),
+      error: signal('')
+    });
+    await component.continueEntry();
+    const request = component.selector.openDemoBootstrapSelector.mock.calls[0][0];
+
+    expect(await request.onSelect('member', 'member')).toBe(false);
+    expect(component.error()).toBe('entry.user.open.error');
+    expect(component.finishEntry).not.toHaveBeenCalled();
+  });
+
   it.each([true, false])('lets the selector store close after navigation completes (local=%s)', async localMode => {
     const selector = new DemoBootstrapSelectorStore();
     vi.spyOn(selector, 'ensureDemoBootstrapSelectorLoaded').mockResolvedValue();

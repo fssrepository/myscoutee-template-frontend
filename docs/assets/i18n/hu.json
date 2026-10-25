@@ -1,6 +1,6 @@
 {
   "lang": "hu",
-  "version": "2026.10.21.2",
+  "version": "2026.10.25.1",
   "messages": {
     "clipboard.paste.permission.help": "Engedélyezd a vágólapot a webhelybeállításokban, majd próbáld újra.",
     "accommodation": "Szállás",
@@ -54,8 +54,8 @@
     "explanation": "Magyarázat",
     "explore": "Felfedezés",
     "operator.bootstrap.auth.invalid": "A telepítői operátori e-mail-cím vagy jelszó helytelen.",
-    "operator.bootstrap.auth.throttled": "Túl sok operátori bejelentkezési kísérlet történt. Próbáld újra később.",
-    "operator.bootstrap.auth.failed": "A dedikált operátori bejelentkezés átmenetileg nem érhető el.",
+    "auth.session.login.throttled": "Túl sok bejelentkezési kísérlet történt. Próbáld újra később.",
+    "auth.session.login.failed": "A bejelentkezés sikertelen. Ellenőrizd az adataidat, majd próbáld újra.",
     "operator.bootstrap.auth.response.invalid": "A szerver érvénytelen operátori bejelentkezési választ küldött.",
     "This email is already registered. Use login instead.": "Ez az email már regisztrálva van. Használd a belépést.",
     "Email or password is incorrect.": "Az email vagy a jelszó hibás.",
@@ -1817,6 +1817,9 @@
     "notifications.open.count.aria": "Értesítések megnyitása, {count} új",
     "notifications.open.muted.count.aria": "Értesítések megnyitása, {count} új, a jelzések némítva",
     "account.deletion.retention.warning": "A fiókot 30 napon belül újraaktiválhatod. Ezután a fiók véglegesen törlődik.",
-    "operator.workspace.title": "Operátori munkaterület"
+    "operator.workspace.title": "Operátori munkaterület",
+    "app.setup.open.browser": "Megnyitás külső böngészőben",
+    "app.setup.open.browser.help": "A helyadat a közeli emberekhez és eseményekhez kell. A Facebook/Instagram böngészője blokkolhatja; nyisd meg külső böngészőben.",
+    "explanation.loading.aria": "Magyarázat betöltése"
   }
 }

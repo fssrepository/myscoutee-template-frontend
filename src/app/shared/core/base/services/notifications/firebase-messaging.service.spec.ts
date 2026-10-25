@@ -67,6 +67,8 @@ describe('Notification preference and background registration', () => {
       } },
       { provide: I18nService, useValue: { revision: () => 0, currentLanguage: () => 'en', translate: (key: string) => key } },
       { provide: AppLocationService, useValue: {
+        browserCoordinates: () => locationMissing() ? null : { latitude: 47, longitude: 19 },
+        loadSavedCoordinates: vi.fn(async () => locationMissing() ? null : { latitude: 47, longitude: 19 }),
         trackingEnabled: signal(true), setTrackingEnabled: vi.fn(),
         requestCurrentCoordinates: vi.fn().mockResolvedValue({ latitude: 47, longitude: 19 }),
         saveCurrentCoordinates: vi.fn().mockResolvedValue(true),
@@ -115,7 +117,7 @@ describe('Notification preference and background registration', () => {
     await vi.advanceTimersByTimeAsync(0);
     fixture.detectChanges();
     const button = fixture.nativeElement.querySelector('button[aria-label="app.setup.location"]');
-    expect(button.getAttribute('aria-pressed')).toBe(String(state === 'granted'));
+    expect(button.getAttribute('aria-pressed')).toBe('true');
     expect(button.disabled).toBe(false);
     expect(button.classList.contains('app-menu__button-row-item--progress-loading')).toBe(false);
     expect(TestBed.inject(AppLocationService).requestCurrentCoordinates).not.toHaveBeenCalled();
@@ -180,7 +182,7 @@ describe('Notification preference and background registration', () => {
     vi.mocked(getToken).mockResolvedValue('saved-token');
     const fixture = TestBed.createComponent(AppSetupPopupComponent);
     fixture.detectChanges();
-    const button = fixture.nativeElement.querySelector('.app-setup-action button') as HTMLButtonElement;
+    const button = fixture.nativeElement.querySelector('[data-guide-field="permissions-save"] button') as HTMLButtonElement;
     expect(button.disabled).toBe(false);
     button.click();
     await vi.advanceTimersByTimeAsync(0);
@@ -457,7 +459,7 @@ describe('Notification preference and background registration', () => {
     expect(setup.nativePending()).toBe(true);
     expect(getToken).not.toHaveBeenCalled();
     fixture.detectChanges();
-    const button = fixture.nativeElement.querySelector('.app-setup-action button') as HTMLButtonElement;
+    const button = fixture.nativeElement.querySelector('[data-guide-field="permissions-save"] button') as HTMLButtonElement;
     expect(button.disabled).toBe(false);
     expect(button.classList.contains('app-menu__button-row-item--progress')).toBe(false);
     expect(button.querySelector('app-indicator')).toBeNull();
@@ -504,7 +506,7 @@ describe('Notification preference and background registration', () => {
     const saving = setup.allow();
     await vi.advanceTimersByTimeAsync(0);
     fixture.detectChanges();
-    const button = fixture.nativeElement.querySelector('.app-setup-action button') as HTMLButtonElement;
+    const button = fixture.nativeElement.querySelector('[data-guide-field="permissions-save"] button') as HTMLButtonElement;
     expect(button.disabled).toBe(false);
     expect(button.querySelector('app-indicator')).toBeNull();
     expect(TestBed.inject(AppLocationService).requestCurrentCoordinates).not.toHaveBeenCalled();
@@ -532,7 +534,7 @@ describe('Notification preference and background registration', () => {
     setup.locationSelected.set(false);
     const fixture = TestBed.createComponent(AppSetupPopupComponent);
     fixture.detectChanges();
-    const button = fixture.nativeElement.querySelector('.app-setup-action button') as HTMLButtonElement;
+    const button = fixture.nativeElement.querySelector('[data-guide-field="permissions-save"] button') as HTMLButtonElement;
     expect(button.disabled).toBe(true);
     button.click();
     expect(setup.error()).toBe('');

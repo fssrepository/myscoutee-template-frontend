@@ -15,10 +15,10 @@ describe('Setup permission help', () => {
     const store = {
       isOpen: signal(true), loginRequested: signal(false), actionPending: signal(false), busy: signal(false),
       notificationConfigurationPending: signal(false), locationPermissionPending: signal(false), locationMissing: signal(false),
-      locationPermission: signal('denied'), locationSelected: signal(false), locationGranted: signal(false),
+      locationPermission: signal('denied'), locationAvailable: signal(false), locationSelected: signal(false), locationGranted: signal(false),
       notificationsSelected: signal(false), saveSucceeded: signal(false), error: signal(''), allowDisabled: signal(false),
       allow, close,
-      pwa: { installPromptVisible: signal(false), installAvailable: signal(false), installActionPending: signal(false) },
+      pwa: { openInBrowser: vi.fn(), installPromptVisible: signal(false), installAvailable: signal(false), installActionPending: signal(false) },
       messaging: { notificationPermission: signal('denied'), notificationsConfigured: true }
     };
     TestBed.configureTestingModule({ imports: [AppSetupPopupComponent], providers: [
@@ -34,7 +34,31 @@ describe('Setup permission help', () => {
     expect(fixture.componentInstance.permissionActions()[0].label).toBe('login');
     store.loginRequested.set(false);
     const root = fixture.nativeElement as HTMLElement;
+    store.loginRequested.set(true);
+    store.locationPermission.set('granted');
+    store.locationSelected.set(false);
+    fixture.detectChanges();
+    const notice = root.querySelector('.ui-popup__error');
+    expect(notice?.getAttribute('role')).toBe('alert');
+    expect(notice?.textContent).toContain('entry.permissions.location.required');
+    expect(fixture.componentInstance.toggles()[0].checked).toBe(false);
+    expect(fixture.componentInstance.toggles()[0].togglePalette).toBe('slate');
+    store.error.set('Region is unavailable');
+    fixture.detectChanges();
+    expect(root.querySelector('.ui-popup__error')?.textContent).toContain('Region is unavailable');
+    store.error.set('');
+    store.loginRequested.set(false);
+    fixture.detectChanges();
+    expect(root.querySelector('.ui-popup__error')?.textContent).toContain('entry.permissions.location.required');
+    store.locationSelected.set(true);
+    fixture.detectChanges();
+    expect(root.querySelector('.ui-popup__error')).toBeNull();
+
     const setup = root.querySelector('.ui-popup')!;
+    const browser = root.querySelector<HTMLElement>('[aria-labelledby="setup-browser"]')!;
+    expect(browser.textContent).toContain('app.setup.open.browser.help');
+    browser.querySelector<HTMLButtonElement>('button')!.click();
+    expect(store.pwa.openInBrowser).toHaveBeenCalledOnce();
     const presence = TestBed.inject(PopupPresenceStore);
     const initialLayer = presence.topLayer();
     const help = root.querySelector<HTMLButtonElement>('button[aria-label="app.setup.help.title"]')!;
@@ -77,7 +101,7 @@ describe('Setup automatic installation offer', () => {
     return { store, currentSession };
   }
 
-  it.each(['demo', 'firebase', 'operator-bootstrap'])('does not open automatically for a %s session before or after profile loading', kind => {
+  it.each(['demo', 'authenticated'])('does not open automatically for a %s session before or after profile loading', kind => {
     const { store } = setup({ kind });
     store.pwa.installPromptVisible.set(true);
     TestBed.tick();

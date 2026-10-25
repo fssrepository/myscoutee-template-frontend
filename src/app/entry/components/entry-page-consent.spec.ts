@@ -4,6 +4,7 @@ import { EntryPageComponent } from './entry-page.component';
 describe.each(['demo', 'firebase'] as const)('%s standalone MCP entry preserves current account consent', kind => {
  function context(consent: unknown) {
   return Object.assign(Object.create(EntryPageComponent.prototype), {
+    location: { loadSavedCoordinates: vi.fn().mockResolvedValue(null) },
    route:{snapshot:{queryParamMap:new Map<string,string>([['redirect','/mcp/authorize']])}},
    session:{currentSession:()=>kind === 'demo' ? {kind,userId:'member'} : {kind,profile:{id:'firebase-id'}}},
    selector:{closeDemoBootstrapSelector:vi.fn()},

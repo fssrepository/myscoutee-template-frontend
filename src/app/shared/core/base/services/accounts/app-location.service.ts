@@ -2,6 +2,7 @@ import {
   Injectable,
   Injector,
   effect,
+  computed,
   inject,
   signal
 } from '@angular/core';
@@ -32,6 +33,11 @@ type HttpUsersServiceInstance = import('../../../http/services/accounts/users.se
 })
 export class AppLocationService {
   private static readonly LOCATION_SYNC_DISTANCE_METERS = 5_000;
+  private readonly browserCoordinateSample = signal<{ cacheId: string; coordinates: LocationCoordinates } | null>(null);
+  readonly browserCoordinates = computed(() => {
+    const sample = this.browserCoordinateSample();
+    return sample?.cacheId === this.browserCoordinatesCacheId() ? sample.coordinates : null;
+  });
 
   private readonly userProfileStore = inject(UserProfileStore);
   private readonly injector = inject(Injector);
@@ -73,10 +79,44 @@ export class AppLocationService {
     }
   }
 
+  private browserCoordinatesCacheId(accountId?: string): string {
+    const session = this.sessionService.currentSession();
+    const owner = accountId ?? (session?.kind === 'authenticated' ? session.profile.id
+      : session?.kind === 'demo' ? session.userId : '');
+    return owner ? `${owner}:browser` : ':entry';
+  }
+
+  async loadSavedCoordinates(): Promise<LocationCoordinates | null> {
+    const cacheId = this.browserCoordinatesCacheId();
+    if (!this.browserCoordinates()) {
+      const stored = await this.readStoredCoordinates(cacheId);
+      if (cacheId !== this.browserCoordinatesCacheId()) return null;
+      if (!this.browserCoordinates() && stored) this.browserCoordinateSample.set({ cacheId, coordinates: stored });
+    }
+    return this.browserCoordinates();
+  }
+
+  private async rememberBrowserCoordinates(coordinates: LocationCoordinates, cacheId = this.browserCoordinatesCacheId()): Promise<void> {
+    const normalized = this.normalizeCoordinates(coordinates);
+    if (!normalized) return;
+    const sample = this.browserCoordinateSample();
+    if (sample?.cacheId === cacheId && this.sameCoordinates(sample.coordinates, normalized)) {
+      await this.locationCacheWrites.get(this.storageKey(cacheId));
+      return;
+    }
+    this.browserCoordinateSample.set({ cacheId, coordinates: normalized });
+    await this.storeCoordinates(cacheId, normalized);
+  }
+
   // Reuse the existing scoped browser location cache; only the profile load acknowledges this pending value.
   async stageLoginCoordinates(accountId: string, coordinates: LocationCoordinates): Promise<void> {
     const normalized = this.normalizeCoordinates(coordinates);
     if (accountId.trim() && normalized) {
+      // Bind the install/setup sample to this account. Logout then exposes no
+      // anonymous coordinate for the next person to inherit.
+      await this.rememberBrowserCoordinates(normalized, this.browserCoordinatesCacheId(accountId));
+      await this.locationCacheWrites.get(this.storageKey(':entry'));
+      try { localStorage.removeItem(this.storageKey(':entry')); } catch { /* Storage may be unavailable. */ }
       this.pendingLoginByAccount.set(accountId, normalized);
       await this.storeCoordinates(`${accountId}:pending-login`, normalized);
     }
@@ -101,6 +141,7 @@ export class AppLocationService {
     }
     this.initialized = true;
     this.clearLegacyLocationCache();
+    void this.loadSavedCoordinates();
 
     effect(() => {
       const activeUserId = this.userProfileStore.activeUserId().trim();
@@ -139,7 +180,7 @@ export class AppLocationService {
     }
 
     const session = this.sessionService.currentSession();
-    if (session?.kind !== 'firebase' || session.profile.id.trim() !== normalizedUserId) {
+    if (session?.kind !== 'authenticated' || session.profile.id.trim() !== normalizedUserId) {
       return null;
     }
 
@@ -203,6 +244,7 @@ export class AppLocationService {
   }
 
   async requestCurrentCoordinates(signal?: AbortSignal): Promise<LocationCoordinates | null> {
+    const cacheId = this.browserCoordinatesCacheId();
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
       return null;
     }
@@ -215,6 +257,7 @@ export class AppLocationService {
         settled = true;
         signal?.removeEventListener('abort', abort);
         if (watchId !== undefined) navigator.geolocation.clearWatch(watchId);
+        if (coordinates && cacheId === this.browserCoordinatesCacheId()) void this.rememberBrowserCoordinates(coordinates, cacheId);
         resolve(coordinates);
       };
       const abort = () => finish(null);
@@ -512,7 +555,7 @@ export class AppLocationService {
     const session = this.sessionService.currentSession();
     return Boolean(
       normalizedUserId
-      && (session?.kind === 'firebase'
+      && (session?.kind === 'authenticated'
         || (session?.kind === 'demo' && session.userId.trim() === normalizedUserId))
       && this.userProfileStore.activeUserId().trim() === normalizedUserId
     );
@@ -557,11 +600,13 @@ export class AppLocationService {
   }
 
   private async persistCoordinates(userId: string, user: UserDto, coordinates: LocationCoordinates): Promise<boolean> {
+    const cacheId = this.browserCoordinatesCacheId();
     const users = this.isLocalUserRouteEnabled()
       ? this.injector.get((await import('../../../local/source/services/accounts/users.service')).LocalUsersService)
       : await this.httpUsersService();
     const savedUser = await users.saveUserProfile({ ...user, locationCoordinates: coordinates });
     if (savedUser?.id?.trim()) {
+      if (cacheId === this.browserCoordinatesCacheId()) await this.rememberBrowserCoordinates(coordinates, cacheId);
       await this.storeCoordinates(userId, this.normalizeCoordinates(savedUser.locationCoordinates) ?? coordinates);
       this.lastPersistedCoordinatesByUserId.set(
         userId, this.normalizeCoordinates(savedUser.locationCoordinates) ?? coordinates

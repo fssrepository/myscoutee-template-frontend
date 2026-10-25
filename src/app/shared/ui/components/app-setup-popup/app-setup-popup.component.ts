@@ -26,8 +26,10 @@ export class AppSetupPopupComponent {
   private readonly i18n = inject(I18nService);
   readonly helpOpen = signal(false);
   readonly actionModel: AppMenuModel = { actionSizing: 'content' };
+  readonly browserActions: AppMenuItem[] = [{ id: 'open-browser', icon: 'open_in_browser',
+    layout: 'action', label: 'app.setup.open.browser', palette: 'blue' }];
   readonly model = computed<PopupModel>(() => ({
-    errorMessage: this.store.error(),
+    errorMessage: this.store.error() || (!this.store.locationSelected() ? 'entry.permissions.location.required' : null),
     title: 'app.setup.title', size: 'small', height: 'auto',
     mobilePresentation: 'fullscreen', headerTone: 'accent', headerPalette: 'violet',
     showClose: true, closeOnBackdrop: false, backdropTone: 'dim',
@@ -52,7 +54,7 @@ export class AppSetupPopupComponent {
     { id: 'location', kind: 'toggle', layout: 'pill', icon: 'location_on',
       label: 'app.setup.location',
       palette: 'blue',
-      togglePalette: this.store.locationPermission() === 'granted' ? 'green' : this.store.locationPermission() === 'denied' ? 'red' : this.store.locationSelected() ? 'blue' : 'slate',
+      togglePalette: this.store.locationSelected() && this.store.locationAvailable() ? 'green' : this.store.locationPermission() === 'denied' ? 'red' : this.store.locationSelected() ? 'blue' : 'slate',
       checked: this.store.locationSelected(),
       showToggleIndicator: !this.store.locationPermissionPending(),
       progress: this.store.locationPermissionPending() ? { state: 'loading', shape: 'button' } : null,
@@ -112,6 +114,7 @@ export class AppSetupPopupComponent {
 
   action(event: AppMenuItemSelectEvent): void {
     if (event.id === 'install') this.store.install();
+    if (event.id === 'open-browser') this.store.pwa.openInBrowser();
     if (event.id === 'allow') void this.store.allow();
   }
 }

@@ -1,3 +1,9 @@
+import { UserProfileStore } from '../profile/user-profile.store';
+import { PwaService } from '../../../../core/base/services/platform/pwa.service';
+import { I18nService } from '../../../../core/base/services/localization/i18n.service';
+import { FirebaseMessagingService } from '../../../../core/base/services/notifications/firebase-messaging.service';
+import { AppLocationService } from '../../../../core/base/services/accounts/app-location.service';
+import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { AppSetupStore } from './app-setup.store';
 
@@ -19,13 +25,13 @@ describe('Setup acquisition timer starts at permission grant', () => {
       isOpen: signal(true), loginRequested: signal(false), nativePending: signal(false), busy: signal(false),
       allowDisabled: () => false, loggedIn: () => true, locationMissing: () => true,
       locationSelected: signal(true), notificationsSelected: signal(false),
-      locationGranted: signal(initialState === 'granted'), locationPermission: signal(initialState),
+      locationAvailable: signal(false), locationGranted: signal(initialState === 'granted'), locationPermission: signal(initialState),
       locationPermissionPending: signal(false), notificationConfigurationPending: signal(false),
       locationEdited: signal(true), error: signal(''), saveSucceeded: signal(false),
       generation: 1, permission: null, locationRequestPending: false,
       locationRequestAbort: null, locationRequestTimer: null, saveFeedbackTimer: null,
       completeLogin: null, checkLocation: null,
-      location: { requestCurrentCoordinates, saveCurrentCoordinates: vi.fn().mockResolvedValue(true),
+      location: { browserCoordinates: () => null, requestCurrentCoordinates, saveCurrentCoordinates: vi.fn().mockResolvedValue(true),
         trackingEnabled: () => true, setTrackingEnabled: vi.fn() },
       messaging: { refreshNotificationPermission: vi.fn(), deviceNotificationsEnabled: () => false },
       pwa: { dismissInstallPrompt: vi.fn() },
@@ -134,14 +140,14 @@ describe('Setup explicit Login action and independent Close', () => {
       isOpen: signal(true), loginRequested: signal(false), nativePending: signal(false), busy: signal(false),
       allowDisabled: () => false, loggedIn: () => false,
       locationSelected: signal(true), notificationsSelected: signal(false),
-      locationGranted: signal(true), locationPermission: signal('granted'),
+      locationAvailable: signal(true), locationGranted: signal(true), locationPermission: signal('granted'),
       locationPermissionPending: signal(false), notificationConfigurationPending: signal(false),
       locationEdited: signal(false), error: signal(''), saveSucceeded: signal(false),
       actionPending: () => false, generation: 1, permission: null,
       saveFeedbackTimer: null,
       completeLogin: vi.fn(),
       checkLocation: checkLocation ? vi.fn().mockResolvedValue(true) : null,
-      location: {
+      location: { browserCoordinates: () => null,
         requestCurrentCoordinates: vi.fn().mockResolvedValue({ latitude: 47, longitude: 19 }),
         setTrackingEnabled: vi.fn()
       },
@@ -193,4 +199,71 @@ describe('Setup explicit Login action and independent Close', () => {
     expect(store.isOpen()).toBe(false);
   });
 
+});
+
+
+describe('Location choice is based on coordinates', () => {
+  afterEach(() => { TestBed.resetTestingModule(); vi.unstubAllGlobals(); });
+
+  it.each(['prompt', 'denied', 'granted'] as const)('starts off without coordinates despite %s permission and remembers the acquired point', async state => {
+    const permission = { state, onchange: null as (() => void) | null };
+    vi.stubGlobal('navigator', { permissions: { query: vi.fn().mockResolvedValue(permission) } });
+    const point = { latitude: 47, longitude: 19 };
+    const browserCoordinates = signal<{ latitude: number; longitude: number } | null>(null);
+    const requestCurrentCoordinates = vi.fn(async () => { browserCoordinates.set(point); return point; });
+    TestBed.configureTestingModule({ providers: [
+      { provide: PwaService, useValue: { dismissInstallPrompt: vi.fn() } },
+      { provide: AppLocationService, useValue: { browserCoordinates, loadSavedCoordinates: vi.fn(async () => browserCoordinates()), trackingEnabled: () => true,
+        requestCurrentCoordinates, setTrackingEnabled: vi.fn(), saveCurrentCoordinates: vi.fn() } },
+      { provide: FirebaseMessagingService, useValue: { deviceNotificationsEnabled: () => false,
+        refreshNotificationPermission: vi.fn(), prepareNotificationConfiguration: vi.fn().mockResolvedValue(undefined) } },
+      { provide: UserProfileStore, useValue: { activeUserId: () => 'member', activeUserLocationMissing: () => false } },
+      { provide: I18nService, useValue: { translate: (key: string) => key } }
+    ] });
+    const store = TestBed.inject(AppSetupStore);
+    const check = vi.fn().mockResolvedValue(true);
+    const pending = store.requestForLogin(check);
+    await store.refreshPermissions();
+    await Promise.resolve();
+    expect(store.locationSelected()).toBe(false);
+    expect(requestCurrentCoordinates).not.toHaveBeenCalled();
+    store.locationSelected.set(true);
+    await store.allow();
+    expect(await pending).toBe(true);
+    expect(requestCurrentCoordinates).toHaveBeenCalledExactlyOnceWith(expect.any(AbortSignal));
+    expect(check).toHaveBeenCalledExactlyOnceWith(point);
+    const nextLogin = store.requestForLogin(check);
+    await store.refreshPermissions();
+    expect(store.locationSelected()).toBe(true);
+    expect(requestCurrentCoordinates).toHaveBeenCalledOnce();
+    store.close();
+    expect(await nextLogin).toBe(false);
+  });
+});
+
+
+describe('A saved coordinate keeps setup on independently of native permission', () => {
+  afterEach(() => { TestBed.resetTestingModule(); vi.unstubAllGlobals(); });
+
+  it.each(['prompt', 'denied', 'granted'] as const)('opens on with coordinates while permission is %s', async state => {
+    vi.stubGlobal('navigator', { permissions: { query: vi.fn().mockResolvedValue({ state, onchange: null }) } });
+    const point = { latitude: 47, longitude: 19 };
+    const requestCurrentCoordinates = vi.fn();
+    TestBed.configureTestingModule({ providers: [
+      { provide: PwaService, useValue: { dismissInstallPrompt: vi.fn() } },
+      { provide: AppLocationService, useValue: { browserCoordinates: signal(point), loadSavedCoordinates: vi.fn().mockResolvedValue(point),
+        trackingEnabled: () => true, requestCurrentCoordinates } },
+      { provide: FirebaseMessagingService, useValue: { deviceNotificationsEnabled: () => false,
+        refreshNotificationPermission: vi.fn(), prepareNotificationConfiguration: vi.fn().mockResolvedValue(undefined) } },
+      { provide: UserProfileStore, useValue: { activeUserId: () => '', activeUserLocationMissing: () => false } },
+      { provide: I18nService, useValue: { translate: (key: string) => key } }
+    ] });
+    const store = TestBed.inject(AppSetupStore);
+    store.open();
+    await store.refreshPermissions();
+    expect(store.locationSelected()).toBe(true);
+    expect(store.locationAvailable()).toBe(true);
+    expect(requestCurrentCoordinates).not.toHaveBeenCalled();
+    store.close();
+  });
 });
