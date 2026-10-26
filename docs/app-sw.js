@@ -1,6 +1,6 @@
 const CACHE_PREFIX = 'myscoutee-template-runtime';
-const CACHE_VERSION = "build-993045b4744e-20261026145222";
-const BUILD_ID = "993045b4744e-20261026145222";
+const CACHE_VERSION = "build-51617601323b-20261026150216";
+const BUILD_ID = "51617601323b-20261026150216";
 const APP_CACHE = `${CACHE_PREFIX}-app-${CACHE_VERSION}`;
 const API_CACHE = `${CACHE_PREFIX}-api-${CACHE_VERSION}`;
 const MEDIA_CACHE = `${CACHE_PREFIX}-media-${CACHE_VERSION}`;
@@ -22,8 +22,8 @@ const PRECACHE_CORE_URLS = [
   './assets/logo/heart.webp'
 ];
 const PRECACHE_BUILD_URLS = [
-  "./chunk-41d5c239.js",
-  "./main-d6484814.js",
+  "./chunk-2564ce9c.js",
+  "./main-4bf72aea.js",
   "./styles-WI3ZKQKX.css"
 ];
 const PRECACHE_URLS = [...PRECACHE_CORE_URLS, ...PRECACHE_BUILD_URLS];
