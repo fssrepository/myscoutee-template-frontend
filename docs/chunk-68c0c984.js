@@ -1,1 +1,0 @@
-var a="MyScoutee",e="Your preferences come first",r="assets/logo/heart.webp",o=[],s={configured:!1,dataControllerName:"",privacyContactEmail:""},t={productName:a,homeLabel:e,logoUrl:r,logoCharacterIndex:0,revision:0,firebaseMessagingConfigured:!1,socialLinks:o,privacyContact:s};export{t as default};

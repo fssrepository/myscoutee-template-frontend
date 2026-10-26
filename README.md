@@ -55,12 +55,11 @@ component histories. A frontend gitlink commit only records that dependency.
 
 ## GitHub Pages
 
-The [Pages workflow](.github/workflows/pages.yml) installs the locked dependencies,
-runs `npm run build:github` and publishes `docs/` after every push to `master`;
-it can also be started manually from **Actions**. Font binaries are supplied by
-`@fssrepository/myscoutee-components@1.5.0` and generated during the build, not
-committed to `docs/media/`. The deployed site serves them locally.
-In **Settings → Pages**, the source is **GitHub Actions**.
+The automatic frontend CI build runs `npm run build:github`. Its optional manual
+`deploy:github` job commits the generated `docs/` files to the permanent
+`gh-pages` branch. GitHub Pages publishes that branch's `/docs` folder. Generated
+files, including local fonts from `@fssrepository/myscoutee-components@1.5.0`,
+are ignored on `master`.
 The site uses `/myscoutee-template-frontend/`, including deep-link redirects.
 
 ## License

@@ -9,6 +9,8 @@ h1 { font-family: "UnifrakturMaguntia", Georgia, serif; font-size: clamp(4rem, 1
 .entry-actions { flex: 0 0 auto; }
 .entry-error { position: absolute; bottom: 5rem; color: #a72e36; max-width: 25rem; padding: 1rem; }
 
+.entry-consent-loading { flex: 1 1 auto; display: grid; place-items: center; min-height: 0; }
+
 .entry-auth-btn {
   position: relative;
   overflow: hidden;

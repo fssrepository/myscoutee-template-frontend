@@ -23,7 +23,9 @@
   <ng-container #privacyDocumentHost />
   @if (!documentViewerComponent()) {
     <app-popup [model]="{ title: 'privacy.document.title', size: 'wide', height: 'full', headerLayout: 'document', closeOnBackdrop: false }" (close)="closeConsent()">
-      <app-indicator kind="load-ring" state="loading" />
+      <div class="entry-consent-loading" role="status" [attr.aria-label]="'privacy.document.loading' | i18n">
+        <app-indicator kind="load-ring" state="loading" />
+      </div>
     </app-popup>
   }
 }
